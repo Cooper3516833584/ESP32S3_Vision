@@ -5,8 +5,12 @@
 #include "board_config.h"
 #include "project_config.h"
 
-void startCameraServer();
+bool startCameraServer();
 void setupLedFlash();
+
+#if !defined(CONFIG_IDF_TARGET_ESP32S3)
+#error "This camera base must be built for ESP32-S3"
+#endif
 
 namespace {
 
@@ -64,9 +68,9 @@ bool startCamera() {
   config.frame_size = FRAMESIZE_QVGA;  // 招新统一评测分辨率：320 x 240
   config.pixel_format = PIXFORMAT_JPEG;
   config.grab_mode = CAMERA_GRAB_LATEST;
-  config.fb_location = psramFound() ? CAMERA_FB_IN_PSRAM : CAMERA_FB_IN_DRAM;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
   config.jpeg_quality = CAMERA_DEFAULT_JPEG_QUALITY;
-  config.fb_count = psramFound() ? CAMERA_FRAME_BUFFERS : 1;
+  config.fb_count = CAMERA_FRAME_BUFFERS;
 
   const esp_err_t error = esp_camera_init(&config);
   if (error != ESP_OK) {
@@ -108,17 +112,33 @@ bool cameraBaseBegin() {
   Serial.println();
 
   if (!psramFound()) {
-    Serial.println("Warning: PSRAM not detected; frame rate will be limited");
+    Serial.println("ERROR: PSRAM not detected");
+    return false;
   }
   if (!startCamera()) {
     return false;
   }
+
+  sensor_t *sensor = esp_camera_sensor_get();
+  Serial.println("Hardware information:");
+  Serial.printf("Chip      : %s\n", ESP.getChipModel());
+  Serial.printf("PSRAM     : %u KB\n", ESP.getPsramSize() / 1024U);
+  Serial.printf("Flash     : %u KB\n", ESP.getFlashChipSize() / 1024U);
+  Serial.printf("Camera    : PID 0x%04X\n", sensor->id.PID);
+  Serial.println("Resolution: 320 x 240");
+  Serial.println("Format    : JPEG");
+  Serial.printf("Buffers   : %u\n", CAMERA_FRAME_BUFFERS);
+  Serial.printf("XCLK      : %u MHz\n", CAMERA_XCLK_HZ / 1000000U);
+
   if (!startAccessPoint()) {
     Serial.println("Cannot start camera server without Wi-Fi AP");
     return false;
   }
 
-  startCameraServer();
+  if (!startCameraServer()) {
+    Serial.println("Camera server start failed");
+    return false;
+  }
   baseReady = true;
 
   Serial.println();
@@ -146,4 +166,3 @@ const char *cameraBaseWifiName() {
 sensor_t *cameraBaseSensor() {
   return esp_camera_sensor_get();
 }
-

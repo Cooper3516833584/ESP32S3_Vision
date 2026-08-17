@@ -11,10 +11,6 @@ $projectParent = Split-Path -Parent $projectDir
 $projectName = Split-Path -Leaf $projectDir
 $buildDir = Join-Path $projectDir 'build\locked'
 
-if (-not (Test-Path -LiteralPath (Join-Path $projectDir 'bootloader.bin'))) {
-    throw 'Missing locked bootloader.bin'
-}
-
 # Use the CLI bundled with the student's Arduino IDE. The project intentionally
 # does not carry a 1.6 GB duplicate toolchain.
 $cliCandidates = @()
@@ -141,13 +137,39 @@ function Assert-Dio40Image([string]$Path) {
     }
 }
 
+function Find-EspTool {
+    $toolsDir = Join-Path $env:LOCALAPPDATA 'Arduino15\packages\esp32\tools\esptool_py'
+    $candidate = Get-ChildItem -LiteralPath $toolsDir -Filter 'esptool.exe' -File -Recurse -ErrorAction SilentlyContinue |
+        Sort-Object FullName -Descending |
+        Select-Object -First 1
+    if (-not $candidate) {
+        throw 'The esptool bundled with ESP32 Core was not found.'
+    }
+    return $candidate.FullName
+}
+
+function Assert-Esp32S3Image([string]$Path, [string]$EspTool) {
+    $output = & $EspTool image-info $Path 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "esptool could not inspect image: $Path"
+    }
+    $details = $output -join "`n"
+    if ($details -notmatch 'Detected image type:\s*ESP32-S3' -or
+        $details -notmatch 'Chip ID:\s*9 \(ESP32-S3\)') {
+        throw "Refusing image: target is not ESP32-S3: $Path"
+    }
+}
+
 $bootImage = Join-Path $buildDir 'CameraWebServer.ino.bootloader.bin'
 $appImage = Join-Path $buildDir 'CameraWebServer.ino.bin'
 Assert-Dio40Image $bootImage
 Assert-Dio40Image $appImage
+$espTool = Find-EspTool
+Assert-Esp32S3Image $bootImage $espTool
+Assert-Esp32S3Image $appImage $espTool
 
 Write-Host ''
-Write-Host 'LOCKED CONFIG VERIFIED: ESP32-S3 / DIO / 40 MHz / 16 MB' -ForegroundColor Green
+Write-Host 'LOCKED CONFIG VERIFIED: ESP32-S3 / DIO / 40 MHz / 16 MB / OPI PSRAM' -ForegroundColor Green
 Write-Host "Build directory: $buildDir"
 if ($Upload) {
     Write-Host "Upload completed on $Port" -ForegroundColor Green

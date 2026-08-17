@@ -24,6 +24,7 @@
 #include "lwip/tcp.h"
 #include "sdkconfig.h"
 #include "board_config.h"
+#include "camera_base.h"
 #include "project_config.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
@@ -58,6 +59,26 @@ static std::atomic<uint32_t> stream_send_failures(0);
 static std::atomic<uint32_t> stream_last_frame_ms(0);
 static std::atomic<uint32_t> stream_last_frame_bytes(0);
 static std::atomic<uint32_t> stream_fps_x10(0);
+static std::atomic<uint32_t> processing_frames(0);
+static std::atomic<uint32_t> processing_fps_x10(0);
+static std::atomic<uint32_t> processing_last_time_us(0);
+static std::atomic<uint32_t> processing_last_report_us(0);
+
+void cameraBaseReportProcessingFrame(uint32_t processTimeUs) {
+  const uint32_t now = micros();
+  const uint32_t previousReport = processing_last_report_us.exchange(now);
+  processing_frames.fetch_add(1);
+  processing_last_time_us.store(processTimeUs);
+
+  if (previousReport != 0) {
+    const uint32_t intervalUs = now - previousReport;
+    const uint32_t instantFpsX10 = intervalUs ? (10000000U / intervalUs) : 0;
+    const uint32_t previousFpsX10 = processing_fps_x10.load();
+    processing_fps_x10.store(
+      previousFpsX10 ? ((previousFpsX10 * 7U + instantFpsX10 * 3U) / 10U) : instantFpsX10
+    );
+  }
+}
 
 #if defined(LED_GPIO_NUM)
 void enable_led(bool en) {  // Turn LED On or Off
@@ -208,7 +229,6 @@ static esp_err_t stream_handler(httpd_req_t *req) {
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
   httpd_resp_set_hdr(req, "Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
   httpd_resp_set_hdr(req, "Pragma", "no-cache");
-  httpd_resp_set_hdr(req, "X-Framerate", "40");
 
   // Disable Nagle so a boundary/header is not held while waiting for more
   // bytes. The short send timeout drops a stalled viewer instead of letting
@@ -294,13 +314,14 @@ static esp_err_t stream_handler(httpd_req_t *req) {
 }
 
 static esp_err_t metrics_handler(httpd_req_t *req) {
-  char json[384];
+  char json[512];
   const int length = snprintf(
     json,
     sizeof(json),
     "{\"stream_active\":%s,\"ap_clients\":%u,\"frames\":%u,\"send_failures\":%u,"
     "\"last_frame_ms\":%u,\"last_frame_bytes\":%u,\"fps\":%.1f,"
-    "\"free_heap\":%u,\"min_free_heap\":%u,\"free_psram\":%u}\n",
+    "\"free_heap\":%u,\"min_free_heap\":%u,\"free_psram\":%u,\"uptime_ms\":%u,"
+    "\"processing_fps\":%.1f,\"last_processing_ms\":%.1f}\n",
     stream_client_active.load() ? "true" : "false",
     WiFi.softAPgetStationNum(),
     stream_frames.load(),
@@ -310,7 +331,10 @@ static esp_err_t metrics_handler(httpd_req_t *req) {
     stream_fps_x10.load() / 10.0f,
     ESP.getFreeHeap(),
     ESP.getMinFreeHeap(),
-    ESP.getFreePsram()
+    ESP.getFreePsram(),
+    millis(),
+    processing_fps_x10.load() / 10.0f,
+    processing_last_time_us.load() / 1000.0f
   );
   httpd_resp_set_type(req, "application/json");
   httpd_resp_set_hdr(req, "Cache-Control", "no-store");
@@ -678,7 +702,7 @@ static esp_err_t index_handler(httpd_req_t *req) {
   return httpd_resp_send(req, message, HTTPD_RESP_USE_STRLEN);
 }
 
-void startCameraServer() {
+bool startCameraServer() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.max_uri_handlers = 16;
   config.max_open_sockets = 5;
@@ -846,27 +870,43 @@ void startCameraServer() {
   };
 
   log_i("Starting web server on port: '%d'", config.server_port);
-  if (httpd_start(&camera_httpd, &config) == ESP_OK) {
-    httpd_register_uri_handler(camera_httpd, &index_uri);
-    httpd_register_uri_handler(camera_httpd, &cmd_uri);
-    httpd_register_uri_handler(camera_httpd, &status_uri);
-    httpd_register_uri_handler(camera_httpd, &capture_uri);
-    httpd_register_uri_handler(camera_httpd, &bmp_uri);
-    httpd_register_uri_handler(camera_httpd, &metrics_uri);
+  if (httpd_start(&camera_httpd, &config) != ESP_OK) {
+    camera_httpd = NULL;
+    return false;
+  }
 
-    httpd_register_uri_handler(camera_httpd, &xclk_uri);
-    httpd_register_uri_handler(camera_httpd, &reg_uri);
-    httpd_register_uri_handler(camera_httpd, &greg_uri);
-    httpd_register_uri_handler(camera_httpd, &pll_uri);
-    httpd_register_uri_handler(camera_httpd, &win_uri);
+  httpd_uri_t *cameraUris[] = {
+    &index_uri, &cmd_uri, &status_uri, &capture_uri, &bmp_uri, &metrics_uri,
+    &xclk_uri, &reg_uri, &greg_uri, &pll_uri, &win_uri
+  };
+  for (httpd_uri_t *uri : cameraUris) {
+    if (httpd_register_uri_handler(camera_httpd, uri) != ESP_OK) {
+      log_e("Failed to register URI: %s", uri->uri);
+      httpd_stop(camera_httpd);
+      camera_httpd = NULL;
+      return false;
+    }
   }
 
   config.server_port += 1;
   config.ctrl_port += 1;
   log_i("Starting stream server on port: '%d'", config.server_port);
-  if (httpd_start(&stream_httpd, &config) == ESP_OK) {
-    httpd_register_uri_handler(stream_httpd, &stream_uri);
+  if (httpd_start(&stream_httpd, &config) != ESP_OK) {
+    stream_httpd = NULL;
+    httpd_stop(camera_httpd);
+    camera_httpd = NULL;
+    return false;
   }
+  if (httpd_register_uri_handler(stream_httpd, &stream_uri) != ESP_OK) {
+    log_e("Failed to register URI: %s", stream_uri.uri);
+    httpd_stop(stream_httpd);
+    stream_httpd = NULL;
+    httpd_stop(camera_httpd);
+    camera_httpd = NULL;
+    return false;
+  }
+
+  return true;
 }
 
 void setupLedFlash() {

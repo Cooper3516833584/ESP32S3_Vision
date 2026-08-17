@@ -14,8 +14,10 @@ bool cameraBaseBegin();
 // 在 Arduino loop() 中持续调用。该函数不会长时间阻塞。
 void cameraBaseUpdate();
 
+// 可选：视觉算法每处理完一帧后调用，用于在 /metrics 中显示算法处理 FPS。
+void cameraBaseReportProcessingFrame(uint32_t processTimeUs);
+
 // 可选状态接口，方便新生扩展自己的逻辑。
 bool cameraBaseReady();
 const char *cameraBaseWifiName();
 sensor_t *cameraBaseSensor();
-
