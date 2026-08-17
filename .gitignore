@@ -1,0 +1,30 @@
+# ---------- 所有以 . 开头的文件/文件夹 ----------
+.*
+!.gitignore
+
+# ---------- 缓存与构建产物 ----------
+# Arduino 编译缓存
+project/CameraWebServer/build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# 通用构建/依赖缓存
+build/
+dist/
+node_modules/
+.pio/
+.cache/
+.venv/
+venv/
+
+# 日志与临时文件
+*.log
+*.tmp
+*.swp
+*.bak
+Thumbs.db
+.DS_Store
