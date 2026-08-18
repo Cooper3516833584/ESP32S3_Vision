@@ -1,30 +1,79 @@
-# ---------- 所有以 . 开头的文件/文件夹 ----------
+# ====================================================================
+# 招新项目 Git 忽略规则
+# 目标：仅在 GitHub 上保留成品程序（Viewer）、项目源码与题目说明
+# ====================================================================
+
+# ---------- 内部维护与参考资料 (不对新生公开) ----------
+maintainer/
+reference/
+
+# ---------- 临时测试与诊断文件 ----------
+partition_readback.bin
+*.bin
+url.txt
+*.png
+
+# ---------- 隐藏文件与配置 (除 .gitignore 外) ----------
 .*
 !.gitignore
+!.gitattributes
 
-# ---------- 缓存与构建产物 ----------
-# Arduino 编译缓存
-project/CameraWebServer/build/
+# ---------- 构建产物与编译缓存 ----------
+# Arduino / PlatformIO / ESP-IDF 构建缓存
+build/
+**/build/
+.pio/
+.codex-build*
+.flash-diagnostics/
+dist/
+out/
+bin/
+obj/
 
-# Python
+# 编译中间文件与固件镜像 (避免本地编译产物被提交)
+*.o
+*.d
+*.a
+*.elf
+*.hex
+*.map
+*.i
+*.s
+
+# ---------- 可执行文件与动态库 ----------
+# 忽略常规 exe/dll，但保留项目 tools 下自带的成品查看器
+*.exe
+*.dll
+!project/CameraWebServer/tools/CameraStreamViewer.exe
+
+# ---------- Python 缓存与虚拟环境 ----------
 __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
-
-# 通用构建/依赖缓存
-build/
-dist/
-node_modules/
-.pio/
-.cache/
 .venv/
 venv/
+env/
 
-# 日志与临时文件
+# ---------- IDE 与编辑器配置 ----------
+.vscode/
+.vs/
+.idea/
+*.user
+*.suo
+*.workspace
+*.code-workspace
+
+# ---------- 系统与临时日志文件 ----------
 *.log
 *.tmp
+*.temp
 *.swp
 *.bak
+*.swo
+*~
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 .DS_Store
+
