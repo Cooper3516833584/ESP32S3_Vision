@@ -1,7 +1,7 @@
 # ESP32-S3 低延迟视频流底座
 
-这个工程让 ESP32-S3 建立 2.4 GHz Wi-Fi AP，并把摄像头的 QVGA JPEG 画面通过
-MJPEG 发送给电脑。新生拿到工程后的基本流程是：
+这个工程让 ESP32-S3 建立 2.4 GHz Wi-Fi AP，并把处理后的 QVGA 原始帧发送给电脑；
+同时保留 MJPEG 兼容入口。新生拿到工程后的基本流程是：
 
 1. 编译
 2. 烧录
@@ -53,7 +53,8 @@ Metrics    : http://192.168.4.1/metrics
 
 `tools\CameraStreamViewer.exe`
 
-查看器会显示实时摄像头画面，并在左上角显示电脑端实际成功接收并解码的 JPEG 视频 FPS。
+查看器优先使用低延迟原始帧，支持 RGB565 和 YUV422；如果固件没有原始帧接口，会自动
+回退 MJPEG。左上角会显示实际 FPS 和当前格式。
 
 招新测试时直接使用该查看器观察：
 
@@ -98,14 +99,16 @@ void loop() {
 默认视频路径保持简单：
 
 ```text
-摄像头 JPEG → esp_camera_fb_get() → MJPEG → CameraStreamViewer.exe
+默认：摄像头 RGB565 → 视觉回调处理/画图 → RGB332 + PackBits → /raw → CameraStreamViewer.exe
+兼容：摄像头 RGB565 → 视觉回调处理/画图 → JPEG → /stream
 ```
 
 固定的主要参数是：
 
 - 分辨率：QVGA（320 × 240）
-- 格式：JPEG
-- JPEG quality：15（数值越小画质越高、数据越大）
+- 摄像头 framebuffer：RGB565
+- 最终推流：320 × 240 JPEG
+- 软件 JPEG quality：80（数值越大画质越高、数据越大）
 - 帧缓存：2 个，位于 PSRAM
 - Grab mode：`CAMERA_GRAB_LATEST`
 - XCLK：20 MHz
@@ -113,6 +116,7 @@ void loop() {
 - TCP：`TCP_NODELAY`、400 ms 发送超时、单视频客户端
 
 本项目硬件要求 ESP32-S3 带 8 MB PSRAM；未检测到 PSRAM 时底座会直接停止启动。
+查看器发现帧分辨率不是 320 × 240 时，会在窗口中央显示错误提示。
 
 ## 5. 运行指标与后续视觉算法
 
@@ -125,23 +129,34 @@ void loop() {
 - `uptime_ms`
 - `processing_fps`、`last_processing_ms`
 
-视频 FPS 反映 MJPEG 推流情况；最终视觉功能还应关注算法实际处理 FPS。算法每处理完
-一帧后可调用：
+视频 FPS 反映当前原始帧或 MJPEG 推流情况；最终视觉功能还应关注算法实际处理 FPS。底座提供帧
+处理回调，算法不需要再次调用 `esp_camera_fb_get()`：
 
 ```cpp
-cameraBaseReportProcessingFrame(processTimeUs);
+void processFrame(const camera_fb_t *frame, void *userContext) {
+  // 当前 frame 是 320 x 240 RGB565，可以直接读取或修改像素。
+  // 不要保存 frame/buf 指针，也不要归还 framebuffer。
+}
+
+void setup() {
+  cameraBaseSetFrameProcessor(processFrame);
+  cameraBaseBegin();
+}
 ```
 
-未调用时，`processing_fps` 和 `last_processing_ms` 保持为 `0`。
+查看器连接后，推流线程每取得一帧会先调用该回调，再发送同一个 framebuffer。底座会
+自动更新 `processing_fps` 和 `last_processing_ms`；未注册回调时两项保持为 `0`。
+回调在 HTTP 推流任务中执行，处理时间会直接影响视频 FPS，因此不要在里面等待网络、
+写文件或长期阻塞。若算法在其他位置处理帧，也可以手动调用
+`cameraBaseReportProcessingFrame(processTimeUs)` 上报耗时。
 
-推流线程会持续调用 `esp_camera_fb_get()`。后续实现色块识别或人脸识别时，不建议在
-多个任务中同时长期取帧；应先统一设计取帧和算法处理方式。本底座暂不加入共享
-framebuffer、回调或消息队列。
+推流线程仍是唯一持续调用 `esp_camera_fb_get()` 的任务，视觉算法与 MJPEG 复用同一帧，
+避免多个任务争抢摄像头 framebuffer。本底座暂不加入共享队列或额外取帧任务。
 
 ## 6. 常见硬件注意事项
 
 - 使用稳定 5 V、至少 1 A 的电源；CH340 连接 TX、RX、GND，并确保所有设备共地。
 - 杜邦线尽量短，插拔摄像头、内存卡和串口线之前先断电。
 - 当前板子的内存卡会干扰启动，默认不要插卡。
-- 本底座需要能够原生输出 JPEG 的摄像头；当前配置使用 OV2640。
+- 当前配置使用能够输出 RGB565 的 OV2640。
 - 若串口显示 PSRAM、摄像头或 HTTP Server 启动失败，先检查板卡配置、供电和排线。

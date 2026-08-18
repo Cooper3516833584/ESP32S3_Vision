@@ -66,7 +66,9 @@ bool startCamera() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = CAMERA_XCLK_HZ;
   config.frame_size = FRAMESIZE_QVGA;  // 招新统一评测分辨率：320 x 240
-  config.pixel_format = PIXFORMAT_JPEG;
+  // 视觉回调可以直接读取和修改 RGB565 像素；推流端会在回调结束后
+  // 把处理后的 framebuffer 编码成 JPEG。
+  config.pixel_format = PIXFORMAT_RGB565;
   config.grab_mode = CAMERA_GRAB_LATEST;
   config.fb_location = CAMERA_FB_IN_PSRAM;
   config.jpeg_quality = CAMERA_DEFAULT_JPEG_QUALITY;
@@ -88,7 +90,6 @@ bool startCamera() {
   // 在传感器端完成不会增加 ESP32 的逐帧软件处理开销。
   sensor->set_hmirror(sensor, 1);
   sensor->set_framesize(sensor, FRAMESIZE_QVGA);
-  sensor->set_quality(sensor, CAMERA_DEFAULT_JPEG_QUALITY);
 
 #if defined(CAMERA_MODEL_ESP32S3_EYE)
   sensor->set_vflip(sensor, 1);
@@ -126,7 +127,7 @@ bool cameraBaseBegin() {
   Serial.printf("Flash     : %u KB\n", ESP.getFlashChipSize() / 1024U);
   Serial.printf("Camera    : PID 0x%04X\n", sensor->id.PID);
   Serial.println("Resolution: 320 x 240");
-  Serial.println("Format    : JPEG");
+  Serial.println("Format    : RGB565 (stream encoded as JPEG)");
   Serial.printf("Buffers   : %u\n", CAMERA_FRAME_BUFFERS);
   Serial.printf("XCLK      : %u MHz\n", CAMERA_XCLK_HZ / 1000000U);
 

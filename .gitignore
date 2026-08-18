@@ -6,6 +6,7 @@
 # ---------- 内部维护与参考资料 (不对新生公开) ----------
 maintainer/
 reference/
+project/.server_and_tracking/
 
 # ---------- 临时测试与诊断文件 ----------
 partition_readback.bin

@@ -14,7 +14,14 @@ bool cameraBaseBegin();
 // 在 Arduino loop() 中持续调用。该函数不会长时间阻塞。
 void cameraBaseUpdate();
 
-// 可选：视觉算法每处理完一帧后调用，用于在 /metrics 中显示算法处理 FPS。
+// 视觉帧处理回调。回调在 MJPEG 推流任务取得 framebuffer 后、发送前执行。
+// frame 仅在回调期间有效，不要保存其指针，也不要调用 esp_camera_fb_return()。
+// 当前底座固定传入 QVGA RGB565；回调可以直接读取和修改 frame->buf 像素。
+// app_httpd.cpp 会在回调结束后编码成 JPEG；回调应尽快返回。
+typedef void (*CameraBaseFrameProcessor)(const camera_fb_t *frame, void *userContext);
+void cameraBaseSetFrameProcessor(CameraBaseFrameProcessor processor, void *userContext = nullptr);
+
+// 供不使用上述回调的外部算法手动上报处理耗时；回调方式会自动上报。
 void cameraBaseReportProcessingFrame(uint32_t processTimeUs);
 
 // 可选状态接口，方便新生扩展自己的逻辑。

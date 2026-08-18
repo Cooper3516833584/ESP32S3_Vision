@@ -20,6 +20,7 @@
 // 招新统一使用 QVGA（320 x 240）+ JPEG 15。
 // JPEG quality 数值越小画质越高、数据越大；建议范围 12~20。
 #define CAMERA_DEFAULT_JPEG_QUALITY 15
+#define STREAM_JPEG_QUALITY 80       // RGB565 软件编码质量，范围 1~100
 #define CAMERA_FRAME_BUFFERS 2
 #define CAMERA_XCLK_HZ 20000000
 

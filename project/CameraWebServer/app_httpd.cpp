@@ -26,6 +26,7 @@
 #include "board_config.h"
 #include "camera_base.h"
 #include "project_config.h"
+#include "raw_frame_codec.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -63,6 +64,15 @@ static std::atomic<uint32_t> processing_frames(0);
 static std::atomic<uint32_t> processing_fps_x10(0);
 static std::atomic<uint32_t> processing_last_time_us(0);
 static std::atomic<uint32_t> processing_last_report_us(0);
+static std::atomic<CameraBaseFrameProcessor> frame_processor(nullptr);
+static std::atomic<void *> frame_processor_context(nullptr);
+
+void cameraBaseSetFrameProcessor(CameraBaseFrameProcessor processor, void *userContext) {
+  // Publish the context before the callback. Typical use registers once in setup().
+  frame_processor.store(nullptr);
+  frame_processor_context.store(userContext);
+  frame_processor.store(processor);
+}
 
 void cameraBaseReportProcessingFrame(uint32_t processTimeUs) {
   const uint32_t now = micros();
@@ -78,6 +88,17 @@ void cameraBaseReportProcessingFrame(uint32_t processTimeUs) {
       previousFpsX10 ? ((previousFpsX10 * 7U + instantFpsX10 * 3U) / 10U) : instantFpsX10
     );
   }
+}
+
+static void processFrameForVision(const camera_fb_t *frame) {
+  CameraBaseFrameProcessor processor = frame_processor.load();
+  if (processor == nullptr) {
+    return;
+  }
+
+  const uint32_t startedUs = micros();
+  processor(frame, frame_processor_context.load());
+  cameraBaseReportProcessingFrame(micros() - startedUs);
 }
 
 #if defined(LED_GPIO_NUM)
@@ -184,7 +205,7 @@ static esp_err_t capture_handler(httpd_req_t *req) {
     res = httpd_resp_send(req, (const char *)fb->buf, fb->len);
   } else {
     jpg_chunking_t jchunk = {req, 0};
-    res = frame2jpg_cb(fb, 80, jpg_encode_stream, &jchunk) ? ESP_OK : ESP_FAIL;
+    res = frame2jpg_cb(fb, STREAM_JPEG_QUALITY, jpg_encode_stream, &jchunk) ? ESP_OK : ESP_FAIL;
     httpd_resp_send_chunk(req, NULL, 0);
 #if ARDUHAL_LOG_LEVEL >= ARDUHAL_LOG_LEVEL_INFO
     fb_len = jchunk.len;
@@ -255,8 +276,9 @@ static esp_err_t stream_handler(httpd_req_t *req) {
     } else {
       _timestamp.tv_sec = fb->timestamp.tv_sec;
       _timestamp.tv_usec = fb->timestamp.tv_usec;
+      processFrameForVision(fb);
       if (fb->format != PIXFORMAT_JPEG) {
-        bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
+        bool jpeg_converted = frame2jpg(fb, STREAM_JPEG_QUALITY, &_jpg_buf, &_jpg_buf_len);
         esp_camera_fb_return(fb);
         fb = NULL;
         if (!jpeg_converted) {
@@ -310,6 +332,88 @@ static esp_err_t stream_handler(httpd_req_t *req) {
 
   stream_client_active.store(false);
 
+  return res;
+}
+
+static void put_u16_le(uint8_t *p, uint16_t value) {
+  p[0] = value & 0xFF;
+  p[1] = value >> 8;
+}
+
+static void put_u32_le(uint8_t *p, uint32_t value) {
+  p[0] = value & 0xFF;
+  p[1] = (value >> 8) & 0xFF;
+  p[2] = (value >> 16) & 0xFF;
+  p[3] = value >> 24;
+}
+
+static esp_err_t raw_stream_handler(httpd_req_t *req) {
+  bool expected = false;
+  if (!stream_client_active.compare_exchange_strong(expected, true)) {
+    httpd_resp_set_status(req, "503 Service Unavailable");
+    return httpd_resp_sendstr(req, "A stream client is already connected.\n");
+  }
+  const size_t pixelCount = 320U * 240U;
+  const size_t packedCapacity = pixelCount + (pixelCount + 127U) / 128U + 16U;
+  uint8_t *rgb332 = (uint8_t *)ps_malloc(pixelCount);
+  uint8_t *packed = (uint8_t *)ps_malloc(packedCapacity);
+  if (!rgb332 || !packed) {
+    free(rgb332); free(packed); stream_client_active.store(false);
+    httpd_resp_send_500(req); return ESP_ERR_NO_MEM;
+  }
+  esp_err_t res = httpd_resp_set_type(req, "application/x-esp32-raw-stream");
+  if (res != ESP_OK) {
+    free(rgb332); free(packed); stream_client_active.store(false); return res;
+  }
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+
+  const int socketFd = httpd_req_to_sockfd(req);
+  const int tcpNoDelay = 1;
+  const struct timeval sendTimeout = {
+    STREAM_SEND_TIMEOUT_MS / 1000,
+    (STREAM_SEND_TIMEOUT_MS % 1000) * 1000
+  };
+  setsockopt(socketFd, IPPROTO_TCP, TCP_NODELAY, &tcpNoDelay, sizeof(tcpNoDelay));
+  setsockopt(socketFd, SOL_SOCKET, SO_SNDTIMEO, &sendTimeout, sizeof(sendTimeout));
+
+  uint32_t sequence = 0;
+  int64_t lastFrameUs = esp_timer_get_time();
+  while (res == ESP_OK) {
+    camera_fb_t *fb = esp_camera_fb_get();
+    if (!fb) { res = ESP_FAIL; break; }
+    processFrameForVision(fb);
+    if (fb->width != 320 || fb->height != 240 || !rawMakeRgb332(fb, rgb332)) {
+      esp_camera_fb_return(fb); res = ESP_ERR_NOT_SUPPORTED; break;
+    }
+    const size_t payloadLength = rawPackBits(rgb332, pixelCount, packed, packedCapacity);
+    if (!payloadLength) { esp_camera_fb_return(fb); res = ESP_ERR_NO_MEM; break; }
+    uint8_t header[20] = {'R','F','S','1',3,0};
+    put_u16_le(header + 6, fb->width);
+    put_u16_le(header + 8, fb->height);
+    put_u32_le(header + 10, payloadLength);
+    put_u32_le(header + 14, sequence++);
+    put_u16_le(header + 18, 0);
+    res = httpd_resp_send_chunk(req, (const char *)header, sizeof(header));
+    if (res == ESP_OK) res = httpd_resp_send_chunk(req, (const char *)packed, payloadLength);
+    const uint32_t frameBytes = payloadLength;
+    esp_camera_fb_return(fb);
+    if (res == ESP_OK) {
+      const int64_t nowUs = esp_timer_get_time();
+      const uint32_t frameMs = (uint32_t)((nowUs - lastFrameUs) / 1000);
+      lastFrameUs = nowUs;
+      stream_frames.fetch_add(1);
+      stream_last_frame_ms.store(frameMs);
+      stream_last_frame_bytes.store(frameBytes);
+      const uint32_t fpsX10 = frameMs ? 10000U / frameMs : 0;
+      const uint32_t oldFpsX10 = stream_fps_x10.load();
+      stream_fps_x10.store(oldFpsX10 ? (oldFpsX10 * 7U + fpsX10 * 3U) / 10U : fpsX10);
+    }
+  }
+  if (res != ESP_OK) stream_send_failures.fetch_add(1);
+  free(rgb332);
+  free(packed);
+  stream_client_active.store(false);
   return res;
 }
 
@@ -778,6 +882,19 @@ bool startCameraServer() {
 #endif
   };
 
+  httpd_uri_t raw_stream_uri = {
+    .uri = "/raw",
+    .method = HTTP_GET,
+    .handler = raw_stream_handler,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+
   httpd_uri_t metrics_uri = {
     .uri = "/metrics",
     .method = HTTP_GET,
@@ -899,6 +1016,14 @@ bool startCameraServer() {
   }
   if (httpd_register_uri_handler(stream_httpd, &stream_uri) != ESP_OK) {
     log_e("Failed to register URI: %s", stream_uri.uri);
+    httpd_stop(stream_httpd);
+    stream_httpd = NULL;
+    httpd_stop(camera_httpd);
+    camera_httpd = NULL;
+    return false;
+  }
+  if (httpd_register_uri_handler(stream_httpd, &raw_stream_uri) != ESP_OK) {
+    log_e("Failed to register URI: %s", raw_stream_uri.uri);
     httpd_stop(stream_httpd);
     stream_httpd = NULL;
     httpd_stop(camera_httpd);
