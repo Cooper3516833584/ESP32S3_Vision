@@ -67,10 +67,22 @@ Metrics    : http://192.168.4.1/metrics
 
 ## 3. 新生主要修改位置
 
-新生主要编辑 `CameraWebServer.ino`。默认主程序只有两个需要保留的调用：
+新生只需要编辑 `CameraWebServer.ino`。视觉题的算法直接写在已经准备好的
+`processFrame()` 函数中，不需要修改 `camera_base.cpp`、`app_httpd.cpp` 或其他底层文件：
 
 ```cpp
+void processFrame(const camera_fb_t *frame, void *userContext) {
+  // 当前图像固定为 320 x 240 RGB565。
+  uint16_t *pixels = reinterpret_cast<uint16_t *>(frame->buf);
+  const int width = frame->width;
+  const int height = frame->height;
+
+  // 在这里编写视觉识别、绘制和控制逻辑。
+  // 像素 (x, y) 的访问方式：pixels[y * width + x]
+}
+
 void setup() {
+  cameraBaseSetFrameProcessor(processFrame);
   cameraBaseBegin();
 
   // 学生初始化代码
@@ -79,9 +91,13 @@ void setup() {
 void loop() {
   cameraBaseUpdate();
 
-  // 学生代码
+  // 学生的非视觉循环代码
 }
 ```
+
+`processFrame()` 会在视频推流线程取得每一帧后、发送前自动执行，修改后的同一帧会
+直接显示在查看器中。`frame` 和 `frame->buf` 只在回调期间有效，不要保存指针或调用
+`esp_camera_fb_return()`；视觉逻辑应尽快返回，避免视频卡顿。
 
 主要文件职责：
 
@@ -129,34 +145,18 @@ void loop() {
 - `uptime_ms`
 - `processing_fps`、`last_processing_ms`
 
-视频 FPS 反映当前原始帧或 MJPEG 推流情况；最终视觉功能还应关注算法实际处理 FPS。底座提供帧
-处理回调，算法不需要再次调用 `esp_camera_fb_get()`：
+视频 FPS 反映当前原始帧或 MJPEG 推流情况；最终视觉功能还应关注算法实际处理 FPS。主程序
+已经注册好帧处理函数，新生直接在 `CameraWebServer.ino` 的 `processFrame()` 中编写算法即可，
+不需要再次调用 `esp_camera_fb_get()`，也不需要修改底层文件。
 
-```cpp
-void processFrame(const camera_fb_t *frame, void *userContext) {
-  // 当前 frame 是 320 x 240 RGB565，可以直接读取或修改像素。
-  // 不要保存 frame/buf 指针，也不要归还 framebuffer。
-}
-
-void setup() {
-  cameraBaseSetFrameProcessor(processFrame);
-  cameraBaseBegin();
-}
-```
-
-查看器连接后，推流线程每取得一帧会先调用该回调，再发送同一个 framebuffer。底座会
-自动更新 `processing_fps` 和 `last_processing_ms`；未注册回调时两项保持为 `0`。
-回调在 HTTP 推流任务中执行，处理时间会直接影响视频 FPS，因此不要在里面等待网络、
-写文件或长期阻塞。若算法在其他位置处理帧，也可以手动调用
-`cameraBaseReportProcessingFrame(processTimeUs)` 上报耗时。
+查看器连接后，推流线程每取得一帧会先调用 `processFrame()`，再发送同一个 framebuffer。
+底座会自动更新 `processing_fps` 和 `last_processing_ms`。回调在 HTTP 推流任务中执行，
+处理时间会直接影响视频 FPS，因此不要在里面等待网络、写文件或长期阻塞。若算法在其他位置
+处理帧，也可以手动调用 `cameraBaseReportProcessingFrame(processTimeUs)` 上报耗时。
 
 推流线程仍是唯一持续调用 `esp_camera_fb_get()` 的任务，视觉算法与 MJPEG 复用同一帧，
 避免多个任务争抢摄像头 framebuffer。本底座暂不加入共享队列或额外取帧任务。
 
 ## 6. 常见硬件注意事项
-
-- 使用稳定 5 V、至少 1 A 的电源；CH340 连接 TX、RX、GND，并确保所有设备共地。
-- 杜邦线尽量短，插拔摄像头、内存卡和串口线之前先断电。
 - 当前板子的内存卡会干扰启动，默认不要插卡。
-- 当前配置使用能够输出 RGB565 的 OV2640。
 - 若串口显示 PSRAM、摄像头或 HTTP Server 启动失败，先检查板卡配置、供电和排线。
