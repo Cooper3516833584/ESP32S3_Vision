@@ -1,0 +1,13 @@
+dependencies:
+  idf:
+    version: ">=5.5.2,<5.6"
+  espressif/arduino-esp32:
+    version: "==3.3.7"
+  espressif/esp32-camera:
+    version: "==2.1.7"
+  espressif/human_face_detect:
+    # human_face_recognition 0.3.2 requires human_face_detect ~0.4.1.
+    # 0.4.2 is the newest exact version in that compatible range.
+    version: "==0.4.2"
+  espressif/human_face_recognition:
+    version: "==0.3.2"
