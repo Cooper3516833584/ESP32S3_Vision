@@ -2,6 +2,8 @@
 
 这是江西招新用的 ESP32-S3 人脸识别提高题底座。摄像头、Wi-Fi、视频推流、运行指标、数据库挂载和绘图函数都已准备好；完成基础提高题时，不需要修改其他源文件。
 
+第一次实现请先阅读 [FACE_RECOGNITION_GUIDE.md](FACE_RECOGNITION_GUIDE.md)。其中包含分阶段实现路线、锁定版本的 ESP-DL API 注意事项、多人识别方法、调试流程和验收清单。
+
 ## 1. 环境与首次构建
 
 推荐使用 VS Code、Espressif IDF 扩展和 ESP-IDF 5.5.x。本工程已用 ESP-IDF 5.5.5 完成干净构建验证。
