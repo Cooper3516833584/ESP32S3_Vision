@@ -65,7 +65,7 @@ try {
     $mappedBuild = "$mappedProject\build\locked"
     $arguments = @(
         'compile',
-        '--fqbn', 'esp32:esp32:esp32s3:FlashMode=dio,FlashSize=16M,PSRAM=opi,PartitionScheme=custom,DebugLevel=none,EraseFlash=all',
+        '--fqbn', 'esp32:esp32:esp32s3:FlashMode=dio,FlashSize=4M,PSRAM=opi,PartitionScheme=custom,DebugLevel=none,EraseFlash=all',
         '--clean',
         '--build-path', $mappedBuild,
         '--build-property', 'build.flash_mode=dio',
@@ -169,7 +169,7 @@ Assert-Esp32S3Image $bootImage $espTool
 Assert-Esp32S3Image $appImage $espTool
 
 Write-Host ''
-Write-Host 'LOCKED CONFIG VERIFIED: ESP32-S3 / DIO / 40 MHz / 16 MB / OPI PSRAM' -ForegroundColor Green
+Write-Host 'LOCKED CONFIG VERIFIED: ESP32-S3 / DIO / 40 MHz / 4 MB / OPI PSRAM' -ForegroundColor Green
 Write-Host "Build directory: $buildDir"
 if ($Upload) {
     Write-Host "Upload completed on $Port" -ForegroundColor Green

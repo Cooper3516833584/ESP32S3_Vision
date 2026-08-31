@@ -149,35 +149,22 @@ The default student skeleton does not instantiate the models, so the linker remo
 
 ## Build result
 
-Result: PASS.
-
-The target's generated `build`, `sdkconfig`, and `managed_components` were removed. The project was then restored with `idf.py set-target esp32s3` and built from scratch using ESP-IDF 5.5.5. This host has two case-distinct Windows path environment entries; the bootloader sub-build initially failed to discover Ninja. Continuing the same clean build with an explicit Ninja/toolchain path completed all targets. A final source-only rebuild after cleanup also passed.
-
-Final artifacts:
-
-```text
-build/CameraWebServer_for_fr.bin  1,057,040 bytes (0x102110)
-build/bootloader/bootloader.bin      20,832 bytes (0x5160)
-```
-
-`idf_size.py` reports a total image payload of 1,056,931 bytes before binary padding. Target-owned sources build without warnings. Non-fatal warnings come from upstream managed components (deprecated FreeRTOS compatibility header, Arduino aggregate initializers, TLS PSK configuration hint, and ESP-IDF HAL aggregate initializers).
+Flash configuration has been normalized to 4 MB in this repair. No firmware build, hardware test, or full face-recognition image-size validation was performed in this repair. Any earlier generated artifacts used the previous Flash layout and are not evidence that the complete face-recognition firmware fits the new 4 MB configuration.
 
 ## Partition usage
 
 ```text
 nvs       0x009000  0x005000   20 KiB
-app0      0x010000  0x7C0000 7936 KiB
-fr        0x7D0000  0x020000  128 KiB
-coredump  0x7F0000  0x010000   64 KiB
+app0      0x010000  0x3C0000 3840 KiB
+fr        0x3D0000  0x020000  128 KiB
+coredump  0x3F0000  0x010000   64 KiB
 ```
 
-Application binary: `0x102110` of `0x7C0000`.
-
-Remaining application space: `0x6BDEF0` (7,069,424 bytes, 86.99%). Partition generation and ESP-IDF size checks passed without overlap or overflow.
+The partition table ends at `0x400000` (4 MiB). Full face-recognition firmware size and 4 MB capacity sufficiency were not validated in this repair.
 
 ## Hardware test
 
-Hardware runtime: NOT VERIFIED.
+Hardware runtime verification: not performed in this repair.
 
 The host lists COM4, COM6, COM9, COM15, COM16, and COM17, but access to device identity metadata was denied. No port could be safely identified as the requested board, so no flash, serial-monitor, camera, PSRAM, reset-loop, SPIFFS reboot, SoftAP, or physical inference claim is made.
 
@@ -206,7 +193,7 @@ Runtime Viewer display, drawing color/orientation, and network reconnection were
 - [x] Reference directory not rewritten
 - [x] ESP-IDF project targets ESP32-S3
 - [x] Arduino setup/loop autostart enabled
-- [x] CPU 240 MHz, DIO 40 MHz, 16 MB Flash, OPI PSRAM 80 MHz restored from defaults
+- [x] CPU 240 MHz, DIO 40 MHz, 4 MB Flash, OPI PSRAM 80 MHz configured in defaults
 - [x] Original camera, SoftAP, raw stream, MJPEG stream, metrics and Viewer preserved
 - [x] Student edits only `main/student.cpp`
 - [x] Frame bridge is zero-copy RGB565BE and synchronous
@@ -216,5 +203,6 @@ Runtime Viewer display, drawing color/orientation, and network reconnection were
 - [x] Fixed API signatures, identity field and multi-detection behavior inspected
 - [x] Temporary probe/reference/debug code removed
 - [x] Final source scan for the prohibited identity label returned zero matches outside generated dependencies/artifacts
-- [x] Clean dependency restoration and full firmware build passed
+- [x] Partition table ends at 0x400000 and retains `/fr`
+- [ ] Full face-recognition firmware size and 4 MB capacity sufficiency validated
 - [ ] Hardware flash/runtime/Viewer/inference/reboot behavior verified

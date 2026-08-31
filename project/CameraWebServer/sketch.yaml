@@ -2,7 +2,7 @@ default_fqbn: esp32:esp32:esp32s3:FlashMode=dio,FlashSize=4M,PSRAM=opi,Partition
 
 profiles:
   recruitment:
-    notes: Locked ESP32-S3 recruitment build (DIO, 40 MHz, 16 MB, OPI PSRAM)
+    notes: Locked ESP32-S3 recruitment build (DIO, 40 MHz, 4 MB, OPI PSRAM)
     fqbn: esp32:esp32:esp32s3:FlashMode=dio,FlashSize=4M,PSRAM=opi,PartitionScheme=custom,DebugLevel=none,EraseFlash=all
     platforms:
       - platform: esp32:esp32 (3.3.7)

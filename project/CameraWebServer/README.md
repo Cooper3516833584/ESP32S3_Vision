@@ -23,7 +23,7 @@ Boards Manager 中安装 `esp32 by Espressif Systems 3.3.7`。脚本使用 Ardui
 - 芯片：ESP32-S3
 - Flash Mode：DIO
 - Flash Frequency：40 MHz
-- Flash Size：16 MB
+- Flash Size：4 MB
 - PSRAM：OPI PSRAM
 - Partition Scheme：Custom
 - Core Debug Level：None

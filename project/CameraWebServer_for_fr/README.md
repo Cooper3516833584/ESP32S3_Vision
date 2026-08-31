@@ -20,7 +20,9 @@ idf.py build
 idf.py -p COMx flash monitor
 ```
 
-硬件配置固定为 ESP32-S3、16 MB DIO 40 MHz Flash、OPI PSRAM 80 MHz、CPU 240 MHz。摄像头固定输出 320 × 240 RGB565，framebuffer 位于 PSRAM。
+硬件配置固定为 ESP32-S3、4 MB DIO 40 MHz Flash、OPI PSRAM 80 MHz、CPU 240 MHz。摄像头固定输出 320 × 240 RGB565，framebuffer 位于 PSRAM。
+
+首次编译需要联网，由 ESP-IDF Component Manager 自动下载工程依赖。
 
 ## 2. 连接视频
 

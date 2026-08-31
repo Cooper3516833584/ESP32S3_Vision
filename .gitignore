@@ -46,6 +46,7 @@ obj/
 *.exe
 *.dll
 !project/CameraWebServer/tools/CameraStreamViewer.exe
+!project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe
 
 # ---------- Python 缓存与虚拟环境 ----------
 __pycache__/
@@ -77,4 +78,3 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 .DS_Store
-
