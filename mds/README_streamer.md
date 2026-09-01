@@ -1,7 +1,7 @@
 # ESP32-S3 低延迟视频流底座
 
 这个工程让 ESP32-S3 建立 2.4 GHz Wi-Fi AP，并把处理后的 QVGA 原始帧发送给电脑；
-同时保留 MJPEG 兼容入口。新生拿到工程后的基本流程是：
+同时保留 MJPEG 兼容入口。拿到工程后的基本流程是：
 
 1. 编译
 2. 烧录
@@ -15,6 +15,7 @@
 
 - `tools\一键编译（固定DIO40）.cmd`
 - `tools\一键烧录（固定DIO40）.cmd`
+- `烧录时需要按住OOI输入`
 
 烧录脚本会询问串口号，例如 `COM5`。电脑需要先安装 Arduino IDE 2.x，并在
 Boards Manager 中安装 `esp32 by Espressif Systems 3.3.7`。脚本使用 Arduino IDE
@@ -44,8 +45,7 @@ Viewer     : tools/CameraStreamViewer.exe (default IP 192.168.4.1)
 Metrics    : http://192.168.4.1/metrics
 ```
 
-电脑连接这个 Wi-Fi。系统提示“无 Internet”是正常的，请保持连接。开发板地址固定为
-`192.168.4.1`。
+电脑连接这个 Wi-Fi。系统提示“无 Internet”是正常的。开发板地址固定为`192.168.4.1`。
 
 ### 视频效果与 FPS 查看
 
