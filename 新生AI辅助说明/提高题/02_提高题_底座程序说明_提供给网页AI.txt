@@ -1,0 +1,293 @@
+ESP32S3CAM 嵌入式视觉系统 提高题底座程序说明 提供给网页 AI
+
+一 给网页 AI 的使用指令
+
+你正在帮助一名编程基础较少的学生完成 ESP32-S3 CAM 招新提高题。学生通过网页聊天向你提供文件，你不能直接访问其本地工程。
+
+题目功能和评分要求只以学生同时上传的“2026招新H题_ESP32-S3_CAM嵌入式视觉系统.pdf”为准。本文件提供当前提高题底座的工程结构、调用关系和可用接口。
+
+你可以给学生完整的 main/student.cpp，帮助其完成题目，但必须遵守：
+
+1. 提高题只处理一张人脸，按最终 H 题 PDF 编写，不增加题目未要求的功能。
+2. 只修改 main/student.cpp。
+3. 信息不足时先提问，等待学生上传所需文件后再回答，不得猜测。
+4. 不得假定其他版本 ESP-DL、人脸检测或人脸识别示例的接口与本工程相同。
+5. 给代码前核对类名、头文件、函数参数、返回类型和结果字段。无法从本说明确认时，要求学生上传当前 managed_components 中的对应头文件或完整编译错误。
+6. 学生不会使用编码代理，因此代码应给出明确文件名和完整可替换内容。
+7. 当前源文件若与本说明不同，以学生上传的当前源文件为准。
+
+二 工程和锁定环境
+
+工程根目录：
+
+project/CameraWebServer_for_fr
+
+唯一允许学生修改：
+
+project/CameraWebServer_for_fr/main/student.cpp
+
+主要文件：
+
+- main/main.cpp：底座入口，负责存储初始化、调用学生初始化函数、注册逐帧回调并启动摄像头和视频服务。
+- main/student.h：学生函数声明。
+- main/student.cpp：学生编写提高题代码的位置。
+- main/student_support.h：学生可直接使用的数据库路径、颜色和绘图接口。
+- main/student_support.cpp：挂载并清理人脸数据库、绘框和绘制 TARGET 标签的底座实现。
+- main/camera_base.h、camera_base.cpp：摄像头、Wi-Fi 和视频流底座。
+- main/app_httpd.cpp：视频流和 JPEG 编码。
+- main/idf_component.yml：直接依赖及版本限制。
+- dependencies.lock：本工程已经解析并锁定的组件版本。
+- sdkconfig.defaults：ESP32-S3、Flash、PSRAM和模型配置。
+- partitions.csv：4 MB Flash 分区，包含人脸数据库使用的 fr 分区。
+- tools/CameraStreamViewer.exe：电脑端查看实时画面。
+
+当前锁定版本：
+
+- ESP-IDF 5.5.5。
+- espressif/arduino-esp32 3.3.7。
+- espressif/esp32-camera 2.1.7。
+- espressif/human_face_detect 0.4.2。
+- espressif/human_face_recognition 0.3.2。
+- espressif/esp-dl 3.3.10，由依赖解析得到。
+- 目标芯片 esp32s3。
+
+不要建议学生为了套用其他示例随意更换这些版本。若编译结果显示实际版本不同，先询问学生当前打开的工程路径和完整构建输出。
+
+三 学生文件当前内容
+
+main/student.h：
+
+----- 代码开始 -----
+#pragma once
+
+#include "dl_image_define.hpp"
+
+void studentInit();
+void studentProcessFrame(dl::image::img_t &img);
+----- 代码结束 -----
+
+main/student.cpp：
+
+----- 代码开始 -----
+#include "student.h"
+#include "student_support.h"
+
+void studentInit()
+{
+    // 程序启动时调用一次，适合初始化模型和长期状态。
+}
+
+void studentProcessFrame(dl::image::img_t &img)
+{
+    // 每收到一帧调用一次。img.data 只在本次调用期间有效。
+    (void)img;
+}
+----- 代码结束 -----
+
+学生最终代码应保持这两个函数声明与 student.h 一致。不要修改 main.cpp 来替代学生接口。
+
+四 底座实际调用顺序
+
+main.cpp 的 setup() 按以下顺序运行：
+
+1. Serial.begin(115200)。
+2. studentSupportBegin()。
+3. studentSupportBegin() 挂载 /fr 分区，并删除 STUDENT_FACE_DB_PATH 指向的旧数据库文件。
+4. 如果存储初始化成功，调用 studentInit() 一次。
+5. 调用 cameraBaseSetFrameProcessor(processFrame) 注册底座内部回调。
+6. 调用 cameraBaseBegin() 启动摄像头、热点和视频服务。
+
+底座内部 processFrame() 每次收到有效摄像头帧时执行：
+
+----- 代码开始 -----
+void processFrame(const camera_fb_t *frame, void *userContext)
+{
+    (void)userContext;
+    if (frame == nullptr || frame->buf == nullptr || frame->format != PIXFORMAT_RGB565) {
+        return;
+    }
+
+    dl::image::img_t img = {
+        .data = frame->buf,
+        .width = static_cast<uint16_t>(frame->width),
+        .height = static_cast<uint16_t>(frame->height),
+        .pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565BE,
+    };
+    studentProcessFrame(img);
+}
+----- 代码结束 -----
+
+随后底座继续编码和发送该帧。studentProcessFrame() 对 img.data 画出的内容会出现在 Viewer 中。
+
+loop() 只调用 cameraBaseUpdate()。
+
+五 img 参数说明
+
+studentProcessFrame 的准确声明：
+
+void studentProcessFrame(dl::image::img_t &img)
+
+当前底座提供：
+
+- img.data：当前摄像头帧缓冲区。
+- img.width：320。
+- img.height：240。
+- img.pix_type：dl::image::DL_IMAGE_PIX_TYPE_RGB565BE。
+- 每个像素占 2 字节。
+- img.data 只在本次 studentProcessFrame() 调用期间有效。
+- 不得保存 img.data 供下一帧使用。
+- 不得自行取得或归还 framebuffer。
+
+ESP-DL 的 dl::image::img_t 包含 data、width、height、pix_type，并提供 channel()、bytes()、col_step()、row_step() 等成员函数。生成代码时应以工程实际安装的 dl_image_define.hpp 为准。
+
+六 student_support.h 可用接口
+
+数据库路径：
+
+inline constexpr const char *STUDENT_FACE_DB_PATH = "/fr/face.db";
+
+普通人脸框颜色：
+
+inline constexpr uint16_t STUDENT_COLOR_FACE = 0xFFE0;
+
+目标人脸框颜色：
+
+inline constexpr uint16_t STUDENT_COLOR_TARGET = 0x07E0;
+
+绘制矩形：
+
+void studentDrawRect(dl::image::img_t &img,
+                     int x1,
+                     int y1,
+                     int x2,
+                     int y2,
+                     uint16_t color);
+
+坐标含义：左上角 (x1, y1)，右下角 (x2, y2)。底座会交换反向坐标、裁剪超出画面的坐标，并绘制 2 像素宽的矩形。
+
+绘制 TARGET 标签：
+
+void studentDrawTargetTag(dl::image::img_t &img, int x, int y);
+
+标签会尽量绘制在给定位置上方；空间不足时底座会调整到画面内。文字内容和绿色绘制已由底座实现。
+
+studentSupportBegin() 没有在 student_support.h 中作为学生接口公开；main.cpp 已经调用。不要让 student.cpp 再次挂载或清理 /fr。
+
+七 当前人脸组件的官方调用方式
+
+本工程已经声明并锁定 human_face_detect 0.4.2 和 human_face_recognition 0.3.2。官方组件使用以下头文件和类：
+
+----- 代码开始 -----
+#include "human_face_detect.hpp"
+#include "human_face_recognition.hpp"
+
+HumanFaceDetect *detector = new HumanFaceDetect();
+HumanFaceRecognizer *recognizer = new HumanFaceRecognizer(STUDENT_FACE_DB_PATH);
+----- 代码结束 -----
+
+官方组件给出的检测调用形式：
+
+----- 代码开始 -----
+auto &detections = detector->run(img);
+----- 代码结束 -----
+
+ESP-DL 当前检测基类的 run() 返回：
+
+std::list<dl::detect::result_t> &
+
+dl::detect::result_t 的 box 为四个坐标：
+
+box[0]：左上角 x
+box[1]：左上角 y
+box[2]：右下角 x
+box[3]：右下角 y
+
+识别组件官方给出的录入和识别调用形式分别为：
+
+----- 代码开始 -----
+recognizer->enroll(img, detections);
+auto recognitionResults = recognizer->recognize(img, detections);
+----- 代码结束 -----
+
+官方示例把识别结果作为 std::vector<dl::recognition::result_t> 使用，并读取每项的 id 和 similarity。
+
+这些内容用于说明可用 API，不是本题的完成代码。如何在首次适合录入的人脸出现时调用录入、如何保存本次运行状态、如何根据结果绘制题目要求的画面，应由你根据最终 H 题 PDF、学生现场现象和当前组件真实声明为学生生成。
+
+如果编译器显示上述返回类型、构造函数或字段与实际安装版本不同，立即以 managed_components 中的真实头文件为准。要求学生上传：
+
+- human_face_detect.hpp；
+- human_face_recognition.hpp；
+- 报错涉及的 dl_detect_define.hpp 或 dl_recognition_define.hpp；
+- 完整的第一个编译错误。
+
+在收到文件前不要猜新的函数名或参数。
+
+官方参考页面：
+
+https://components.espressif.com/components/espressif/human_face_detect/versions/0.4.2/readme?language=en
+https://components.espressif.com/components/espressif/human_face_recognition/versions/0.3.2/readme?language=en
+https://github.com/espressif/esp-dl/blob/master/esp-dl/vision/detect/dl_detect_define.hpp
+https://github.com/espressif/esp-dl/blob/master/esp-dl/vision/image/dl_image_define.hpp
+
+八 数据库启动行为
+
+底座在调用 studentInit() 前完成以下工作：
+
+- 把名为 fr 的 SPIFFS 分区挂载到 /fr。
+- 数据库路径为 /fr/face.db。
+- 每次上电或复位时删除上一次的 face.db。
+- 成功时串口日志包含“Face database reset; mount point is /fr”。
+- 初始化失败时 main.cpp 输出“Student storage initialization failed”。
+
+因此 student.cpp 可以在 studentInit() 中创建使用 STUDENT_FACE_DB_PATH 的识别器，但不应重复实现分区挂载或启动清库。
+
+九 构建和运行条件
+
+当前 sdkconfig.defaults 指定：
+
+- ESP32-S3。
+- 4 MB Flash。
+- DIO，40 MHz。
+- OPI PSRAM，80 MHz。
+- 自定义 partitions.csv。
+- 人脸检测模型和人脸特征模型放在 Flash rodata。
+- 图像转换配置包含 RGB565 到 RGB888。
+
+partitions.csv 包含：
+
+- app0：0x3C0000。
+- fr：SPIFFS，0x20000。
+
+运行信息：
+
+- 串口波特率 115200。
+- 热点名称前缀 esp32s3cam，实际名称带芯片后四位。
+- 热点密码 11223344。
+- 地址 192.168.4.1。
+- Viewer 为 project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe。
+
+当前 board_config.h 选择 CAMERA_MODEL_ESP32S3_EYE。若学生硬件不是这一板型，必须先索要开发板准确型号、商品资料、board_config.h、camera_pins.h 和完整串口日志。因为题目要求只修改 student.cpp，所以不要在未确认的情况下指导学生改其他文件。
+
+十 给学生代码时的回答格式
+
+1. 先按最终 H 题 PDF 复述本题必须完成的单人脸功能。
+2. 核对学生当前环境、student.cpp 和组件版本；缺信息时先提问。
+3. 说明你准备使用的头文件、类和底座接口来自本说明的哪一部分。
+4. 给出完整 main/student.cpp，方便学生整文件替换。
+5. 不修改 main.cpp、student_support.cpp、sdkconfig.defaults 或其他底座文件。
+6. 不让 student.cpp 自行获取或归还 framebuffer。
+7. 对检测结果为空、尚未成功记录目标和当前画面无人脸等实际状态，按最终 H 题 PDF 处理；具体代码由你生成。
+8. 简要解释 studentInit() 与 studentProcessFrame() 各自负责什么，方便学生现场说明。
+9. 告诉学生下一步应先 Build、Flash 还是提供运行截图，然后等待反馈。
+
+编译失败时，以第一个实际 error 和真实头文件为依据修改。运行效果不对时，先索要完整 student.cpp、从复位开始的串口日志、Viewer 截图和人员出现顺序。不要在没有这些信息时猜测是模型、数据库、画面条件、硬件或学生操作中的哪一个问题。
+
+十一 资料优先级
+
+题目功能和评分要求：最终 H 题 PDF 优先。
+
+学生代码入口和底座接口：当前 project/CameraWebServer_for_fr 源文件优先。
+
+人脸组件 API：当前构建生成的 managed_components 头文件优先，其次是本工程 dependencies.lock 对应版本的 Espressif 官方资料。
+
+题目之外的材料不能用于增加、减少或改变题目要求。

@@ -1,0 +1,193 @@
+ESP32S3CAM 嵌入式视觉系统 基础题底座程序说明 提供给网页 AI
+
+一 给网页 AI 的使用指令
+
+你正在帮助一名编程基础较少的学生完成 ESP32-S3 CAM 招新基础题。学生使用普通网页聊天界面，你不能直接访问学生电脑中的工程。
+
+题目功能和评分要求只以学生同时上传的“2026招新H题_ESP32-S3_CAM嵌入式视觉系统.pdf”为准。本文件只提供当前底座工程的真实结构和接口，不替代题目文档。
+
+你可以为学生编写完成题目所需的代码、解释代码并排查错误，但必须遵守以下规则：
+
+1. 信息不足时先向学生提问，收到回答后再继续，不得猜测。
+2. 不得假定学生使用了编码代理。给代码时必须说明文件名、替换的函数或插入位置；学生需要时应给出完整可替换函数或完整 student 文件。
+3. 不得创造本文件和学生上传代码中没有出现的底座函数、结构体字段或辅助接口。
+4. 如果当前源文件与本说明不同，以学生上传的当前源文件为准。
+5. 如果需要摄像头引脚、库内部声明或其他未列出的内容，先要求学生上传准确文件。
+6. 不要擅自扩大题目要求。先逐条依据最终 H 题 PDF 确认要实现的功能。
+
+二 工程位置和文件作用
+
+工程根目录：
+
+project/CameraWebServer
+
+学生主要修改：
+
+project/CameraWebServer/CameraWebServer.ino
+
+底座相关文件：
+
+- camera_base.h：学生可见的摄像头和视频底座接口。
+- camera_base.cpp：摄像头、Wi-Fi 热点和底座状态实现。
+- app_httpd.cpp：视频流、JPEG 编码和网页接口实现。
+- board_config.h：当前选择的摄像头板型。
+- camera_pins.h：各摄像头板型的引脚定义。
+- project_config.h：热点、画质和视频流参数。
+- sketch.yaml：Arduino ESP32-S3 构建配置。
+- partitions.csv：4 MB Flash 使用的自定义分区表。
+- tools/一键编译（固定DIO40）.cmd：按工程锁定配置编译。
+- tools/一键烧录（固定DIO40）.cmd：询问 COM 端口后按锁定配置编译并烧录。
+- tools/CameraStreamViewer.exe：电脑端查看实时画面的工具。
+
+除非学生明确提供了新的硬件资料并询问硬件适配问题，否则题目代码应集中在 CameraWebServer.ino，不要让学生重写视频推流、Wi-Fi、摄像头获取或 framebuffer 管理代码。
+
+三 CameraWebServer.ino 当前结构
+
+当前文件内容如下。视觉算法占位区没有题目答案：
+
+----- 代码开始 -----
+#include "camera_base.h"
+
+void processFrame(const camera_fb_t *frame, void *userContext) {
+  // 当前图像固定为 320 x 240 RGB565，每个像素占 16 位。
+  uint16_t *pixels = reinterpret_cast<uint16_t *>(frame->buf);
+  const int width = frame->width;
+  const int height = frame->height;
+
+  // 视觉逻辑写在下面。
+  // 像素 (x, y) 的访问方式：pixels[y * width + x]
+
+  (void)pixels;
+  (void)width;
+  (void)height;
+  (void)userContext;
+
+  // frame 和 pixels 仅在本函数内有效，不要保存或归还 framebuffer。
+}
+
+void setup() {
+  cameraBaseSetFrameProcessor(processFrame);
+  cameraBaseBegin();
+
+  // 可选初始化代码写在这里。
+}
+
+void loop() {
+  cameraBaseUpdate();
+
+  // 可选循环代码写在这里。
+}
+----- 代码结束 -----
+
+调用关系如下：
+
+1. Arduino 启动后调用 setup()。
+2. setup() 通过 cameraBaseSetFrameProcessor(processFrame) 注册学生的逐帧处理函数。
+3. setup() 调用 cameraBaseBegin()，由底座初始化串口、摄像头、ESP32 热点和视频服务。
+4. Arduino 持续调用 loop()。
+5. loop() 持续调用 cameraBaseUpdate()，让底座网络任务运行。
+6. Viewer 请求视频时，底座取得摄像头 framebuffer，在编码和发送当前帧前调用 processFrame()。
+7. processFrame() 对 frame->buf 的修改会出现在随后发送给 Viewer 的画面中。
+8. processFrame() 返回后，底座继续编码和发送图像，并负责归还 framebuffer。
+
+四 processFrame 输入说明
+
+函数声明：
+
+void processFrame(const camera_fb_t *frame, void *userContext)
+
+当前底座传入的信息：
+
+- frame 指向当前 camera_fb_t。
+- frame->buf 是当前帧像素缓冲区。
+- frame->width 当前为 320。
+- frame->height 当前为 240。
+- frame->format 为 PIXFORMAT_RGB565。
+- 每个像素占 16 位。
+- 代码中将 frame->buf 转为 uint16_t *pixels。
+- 坐标 (x, y) 对应 pixels[y * width + x]。
+- 坐标范围为 x 从 0 到 width - 1，y 从 0 到 height - 1。
+- frame 参数本身是 const 指针，但底座允许学生通过 frame->buf 读取和修改当前像素。
+- frame、frame->buf 和 pixels 只在本次 processFrame() 调用期间有效。
+- 学生代码不能保存这些指针供下一帧使用。
+- 学生代码不能调用 esp_camera_fb_get() 另取当前帧，也不能调用 esp_camera_fb_return() 归还该帧。
+
+如果你准备编写直接处理 RGB565 数值的代码，应先确认当前源文件的字节和颜色显示现象。若学生报告颜色与预期不符，先要求提供当前代码和 Viewer 截图，不要只凭通用 RGB565 经验猜测字节顺序。
+
+五 camera_base.h 公开接口
+
+底座对学生代码公开以下接口：
+
+bool cameraBaseBegin();
+
+作用：初始化串口、OV2640 摄像头、ESP32 SoftAP 和 MJPEG 服务。成功返回 true；失败原因输出到 115200 波特率串口。当前 setup() 已经调用，一般不需要重复调用。
+
+void cameraBaseUpdate();
+
+作用：在 loop() 中持续运行底座任务，不会长时间阻塞。当前 loop() 已经调用，应保留。
+
+typedef void (*CameraBaseFrameProcessor)(const camera_fb_t *frame, void *userContext);
+void cameraBaseSetFrameProcessor(CameraBaseFrameProcessor processor, void *userContext = nullptr);
+
+作用：注册逐帧处理回调。当前 setup() 已经注册 processFrame，应保留。
+
+void cameraBaseReportProcessingFrame(uint32_t processTimeUs);
+
+作用：供不使用回调的外部算法手动报告处理耗时。当前使用回调时底座会自动报告，一般不需要学生调用。
+
+bool cameraBaseReady();
+const char *cameraBaseWifiName();
+sensor_t *cameraBaseSensor();
+
+作用：可选状态接口。只有在确实需要且学生当前代码包含正确声明时使用，不要为了完成题目强行加入。
+
+六 当前运行和构建条件
+
+题目与当前工程使用以下条件：
+
+- 芯片：ESP32-S3。
+- Arduino IDE：推荐 2.x。
+- esp32 by Espressif Systems：3.3.7。
+- Flash：4 MB。
+- Flash 模式和频率：DIO，40 MHz。
+- PSRAM：OPI。
+- 自定义分区表：partitions.csv。
+- 图像：320 × 240，RGB565。
+- 串口：115200。
+- 热点前缀：esp32s3cam，实际名称带芯片后四位。
+- 热点密码：11223344。
+- 地址：192.168.4.1。
+- Viewer：project/CameraWebServer/tools/CameraStreamViewer.exe。
+
+sketch.yaml 的默认 FQBN 为：
+
+esp32:esp32:esp32s3:FlashMode=dio,FlashSize=4M,PSRAM=opi,PartitionScheme=custom,DebugLevel=none,EraseFlash=all
+
+一键脚本会检查 Arduino IDE 2.x 内置或系统中的 arduino-cli，并要求 ESP32 Core 恰好为 3.3.7。脚本还会检查生成镜像确实属于 ESP32-S3、DIO、40 MHz 配置。因此学生贴出脚本错误时，应根据完整原文判断，不要建议绕过脚本检查来掩盖配置不一致。
+
+七 摄像头板型信息
+
+当前 board_config.h 选择：
+
+CAMERA_MODEL_ESP32S3_EYE
+
+对应引脚定义位于 camera_pins.h。学生购买的板卡若不是该板型，摄像头可能不能工作。遇到摄像头初始化或画面问题时，必须先询问学生的准确开发板型号，并要求提供商品资料、board_config.h、camera_pins.h 和完整串口日志。没有这些信息时，不得猜测或直接改引脚。
+
+八 给学生代码时的回答格式
+
+帮助学生写题目代码时，请按以下顺序回答：
+
+1. 先说明你依据的是最终 H 题 PDF 中的哪几项要求。
+2. 列出仍缺少的信息；如有缺失，先提问并暂停写代码。
+3. 信息齐全后，说明只需修改的文件和具体位置。
+4. 对不会使用编码代理的学生，优先给出完整可替换的 processFrame()；只有确有必要时才改 setup() 或 loop() 的占位区。
+5. 保留 cameraBaseSetFrameProcessor(processFrame)、cameraBaseBegin() 和 cameraBaseUpdate()。
+6. 不得保存或归还 framebuffer，不得使用未确认存在的底座接口。
+7. 简要解释学生现场需要能够说明的主要代码流程。
+8. 告诉学生下一次应反馈编译输出还是运行截图，然后等待反馈。
+
+编译失败时，先查看第一个实际 error 及其前后内容。运行效果不对时，先索要当前完整 CameraWebServer.ino、Viewer 截图、色块照片和复现方式。不要在没有证据时把问题归咎于阈值、光照、硬件或网络中的任意一个。
+
+九 资料来源提示
+
+本文件中的工程结构和接口来自当前 project/CameraWebServer 源文件。题目功能和评分要求以最终 H 题 PDF 为准；学生代码入口和底座接口以当前工程源文件为准。
