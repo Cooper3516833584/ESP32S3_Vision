@@ -36,8 +36,11 @@ project/CameraWebServer/CameraWebServer.ino
 - sketch.yaml：Arduino ESP32-S3 构建配置。
 - partitions.csv：4 MB Flash 使用的自定义分区表。
 - tools/一键编译（固定DIO40）.cmd：按工程锁定配置编译。
-- tools/一键烧录（固定DIO40）.cmd：询问 COM 端口后按锁定配置编译并烧录。
-- tools/CameraStreamViewer.exe：电脑端查看实时画面的工具。
+- tools/一键烧录（固定DIO40）.cmd：询问串口后按锁定配置编译并烧录。
+- tools/一键编译（macOS固定DIO40）.command、tools/一键烧录（macOS固定DIO40）.command：macOS Finder 双击入口。
+- tools/build_locked.sh：macOS Arduino CLI 固定配置编译、校验和烧录逻辑。
+- camera_web_viewer.h：ESP32 本机提供的离线浏览器 Viewer 页面。
+- tools/CameraStreamViewer.exe：Windows 兼容查看工具；推荐浏览器打开 http://192.168.4.1/。
 
 除非学生明确提供了新的硬件资料并询问硬件适配问题，否则题目代码应集中在 CameraWebServer.ino，不要让学生重写视频推流、Wi-Fi、摄像头获取或 framebuffer 管理代码。
 
@@ -120,7 +123,7 @@ void processFrame(const camera_fb_t *frame, void *userContext)
 
 bool cameraBaseBegin();
 
-作用：初始化串口、OV2640 摄像头、ESP32 SoftAP 和 MJPEG 服务。成功返回 true；失败原因输出到 115200 波特率串口。当前 setup() 已经调用，一般不需要重复调用。
+作用：初始化串口、摄像头、ESP32 SoftAP 和 HTTP 视频服务。成功返回 true；失败原因输出到 115200 波特率串口。当前 setup() 已经调用，一般不需要重复调用。
 
 void cameraBaseUpdate();
 
@@ -157,7 +160,8 @@ sensor_t *cameraBaseSensor();
 - 热点前缀：esp32s3cam，实际名称带芯片后四位。
 - 热点密码：11223344。
 - 地址：192.168.4.1。
-- Viewer：project/CameraWebServer/tools/CameraStreamViewer.exe。
+- 推荐 Viewer：连接 esp32s3cam-xxxx 热点后，在浏览器打开 http://192.168.4.1/。页面优先读取 81 端口的 /raw，并可切换到 /stream MJPEG 兼容模式。
+- Windows 兼容 Viewer：project/CameraWebServer/tools/CameraStreamViewer.exe。
 
 sketch.yaml 的默认 FQBN 为：
 

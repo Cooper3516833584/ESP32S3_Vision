@@ -146,7 +146,7 @@ bool cameraBaseBegin() {
   Serial.println("Camera base ready (320 x 240, horizontal mirror enabled)");
   Serial.printf("Wi-Fi name : %s\n", apSsid);
   Serial.printf("Password   : %s\n", AP_PASSWORD);
-  Serial.println("Viewer     : tools/CameraStreamViewer.exe (default IP 192.168.4.1)");
+  Serial.println("Viewer     : browser http://192.168.4.1/ (Windows CameraStreamViewer.exe is also supported)");
   Serial.println("Metrics    : http://192.168.4.1/metrics");
   return true;
 }

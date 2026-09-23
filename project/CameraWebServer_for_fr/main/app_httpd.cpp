@@ -26,6 +26,7 @@
 #include "camera_base.h"
 #include "project_config.h"
 #include "raw_frame_codec.h"
+#include "camera_web_viewer.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -225,6 +226,7 @@ static esp_err_t stream_handler(httpd_req_t *req) {
     httpd_resp_set_status(req, "503 Service Unavailable");
     httpd_resp_set_type(req, "text/plain");
     httpd_resp_set_hdr(req, "Retry-After", "1");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_sendstr(req, "A low-latency stream client is already connected.\n");
   }
 #else
@@ -350,6 +352,7 @@ static esp_err_t raw_stream_handler(httpd_req_t *req) {
   bool expected = false;
   if (!stream_client_active.compare_exchange_strong(expected, true)) {
     httpd_resp_set_status(req, "503 Service Unavailable");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_sendstr(req, "A stream client is already connected.\n");
   }
   const size_t pixelCount = 320U * 240U;
@@ -798,11 +801,9 @@ static esp_err_t win_handler(httpd_req_t *req) {
 }
 
 static esp_err_t index_handler(httpd_req_t *req) {
-  static const char message[] =
-    "ESP32 Camera is ready. Use CameraStreamViewer.exe on the evaluator PC.\n";
-  httpd_resp_set_type(req, "text/plain; charset=utf-8");
+  httpd_resp_set_type(req, "text/html; charset=utf-8");
   httpd_resp_set_hdr(req, "Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-  return httpd_resp_send(req, message, HTTPD_RESP_USE_STRLEN);
+  return httpd_resp_send(req, CAMERA_WEB_VIEWER_HTML, HTTPD_RESP_USE_STRLEN);
 }
 
 bool startCameraServer() {

@@ -21,6 +21,8 @@ ESP32S3CAM 嵌入式视觉系统 提高题 使用 AI 完成题目说明
 
 禁止猜测我的操作系统、开发板型号、ESP-IDF 环境、组件版本、头文件内容、函数参数、检测结果字段或报错原因。如果继续回答所需的信息不足，请先提出具体问题，等待我回复或上传文件后再解答。需要查看文件时，请告诉我准确路径以及要上传整个文件还是其中哪一段。
 
+开始操作前先确认我使用 Windows 还是 macOS；macOS 步骤使用 `/dev/cu.*` 串口和浏览器 Viewer，不要要求我运行 Windows `.exe`。
+
 你可以给出能够直接使用的 student.cpp，但必须说明替换哪个文件，并确保只修改 main/student.cpp。不得编造工程中不存在的接口，也不得把其他版本组件的示例直接当成当前版本可用代码。对组件 API 不确定时，先让我上传编译后生成的对应头文件或完整编译错误。
 
 我的编程基础较少。请一次只指导一个阶段，每一步说明我要点击什么、输入什么、应该看到什么。完成当前阶段后先等我反馈。
@@ -58,6 +60,8 @@ PSRAM 容量是：[填写或不知道]
 
 工程锁定的目标芯片是 ESP32-S3，第一次构建时可能需要联网下载工程声明的组件。
 
+Windows 和 macOS 均可使用这套 VS Code + Espressif IDF 扩展流程。macOS 用户安装 macOS 版 VS Code 和 Espressif IDF 扩展，在扩展中配置 ESP-IDF 5.5.5。打开 `project/CameraWebServer_for_fr` 后确认 target 为 `esp32s3`，串口从 `/dev/cu.*` 设备中选择，再执行 Build、Flash、Monitor。Monitor 波特率为 115200。
+
 让 AI 指导安装时发送：
 
 【复制给 AI】
@@ -81,16 +85,12 @@ project/CameraWebServer_for_fr/main/student.cpp
 先不要修改 student.cpp，要求 AI 指导你原样编译和烧录。这样可以确认环境、组件、摄像头和视频底座是否能够工作。
 
 【复制给 AI】
-我已打开 project/CameraWebServer_for_fr，目前没有修改代码。请先指导我使用 VS Code 的 Espressif IDF 扩展完成以下事情：确认当前 ESP-IDF 是 5.5.5、确认目标芯片是 esp32s3、选择实际串口、原样 Build、Flash 和 Monitor。
+我已打开 project/CameraWebServer_for_fr，目前没有修改代码。请先询问我的系统是 Windows 还是 macOS。指导 macOS 用户选择 `/dev/cu.*` 串口；Windows 用户选择对应串口。然后使用 VS Code 的 Espressif IDF 扩展确认 ESP-IDF 是 5.5.5、目标芯片是 esp32s3，并原样 Build、Flash 和 Monitor（115200）。
 
 请一次只指导一个操作，并告诉我成功后应看到什么。如果构建需要联网获取组件，请先说明应出现什么正常提示。出现错误时先让我提供完整输出，不要猜原因。
 【复制结束】
 
-程序启动后，串口使用 115200。电脑连接开发板建立的 esp32s3cam-xxxx 热点，密码为 11223344，地址为 192.168.4.1。使用以下工具查看画面：
-
-project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe
-
-Windows 显示“无 Internet”本身不代表连接失败。
+程序启动后，串口 Monitor 使用 115200。电脑连接开发板建立的 esp32s3cam-xxxx 热点，密码为 11223344，然后用浏览器访问 http://192.168.4.1/ 查看摄像头、人脸框和 TARGET 标记。Wi-Fi 提示没有 Internet 属于正常现象；确认当前 SSID 为 esp32s3cam-xxxx。Windows 用户也可以继续使用 `project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe`；macOS 不需要该 exe。
 
 六 让 AI 编写提高题代码
 
@@ -133,7 +133,7 @@ Windows 显示“无 Internet”本身不代表连接失败。
 
 烧录失败时提供：
 
-- 实际串口号。
+- 实际串口（Windows 常见 COM5；macOS 常见 `/dev/cu.usbmodemxxxx`）。
 - VS Code 状态栏或设备选择截图。
 - Flash 任务的完整输出。
 - 开发板连接状态、指示灯和你按过的按键。

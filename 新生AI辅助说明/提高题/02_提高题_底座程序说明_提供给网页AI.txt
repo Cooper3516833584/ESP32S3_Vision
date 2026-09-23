@@ -39,7 +39,8 @@ project/CameraWebServer_for_fr/main/student.cpp
 - dependencies.lock：本工程已经解析并锁定的组件版本。
 - sdkconfig.defaults：ESP32-S3、Flash、PSRAM和模型配置。
 - partitions.csv：4 MB Flash 分区，包含人脸数据库使用的 fr 分区。
-- tools/CameraStreamViewer.exe：电脑端查看实时画面。
+- camera_web_viewer.h：由 ESP32 本机提供的离线浏览器 Viewer 页面。
+- tools/CameraStreamViewer.exe：Windows 兼容查看工具；推荐在浏览器打开 http://192.168.4.1/。
 
 当前锁定版本：
 
@@ -264,7 +265,8 @@ partitions.csv 包含：
 - 热点名称前缀 esp32s3cam，实际名称带芯片后四位。
 - 热点密码 11223344。
 - 地址 192.168.4.1。
-- Viewer 为 project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe。
+- 推荐 Viewer：连接 esp32s3cam-xxxx 热点后，在浏览器打开 http://192.168.4.1/，查看人脸框和 TARGET 标记。
+- Windows 兼容 Viewer：project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe。
 
 当前 board_config.h 选择 CAMERA_MODEL_ESP32S3_EYE。若学生硬件不是这一板型，必须先索要开发板准确型号、商品资料、board_config.h、camera_pins.h 和完整串口日志。因为题目要求只修改 student.cpp，所以不要在未确认的情况下指导学生改其他文件。
 
