@@ -811,6 +811,15 @@ static esp_err_t index_handler(httpd_req_t *req) {
   return httpd_resp_send(req, CAMERA_WEB_VIEWER_HTML, HTTPD_RESP_USE_STRLEN);
 }
 
+// Lightweight launcher probe. This endpoint never opens or reserves a stream client.
+static esp_err_t health_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json; charset=utf-8");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  return httpd_resp_send(req,
+                         "{\"ok\":true,\"device\":\"ESP32S3_Vision\",\"viewer\":1}",
+                         HTTPD_RESP_USE_STRLEN);
+}
+
 bool startCameraServer() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.max_uri_handlers = 16;
@@ -830,6 +839,19 @@ bool startCameraServer() {
 #ifdef CONFIG_HTTPD_WS_SUPPORT
     ,
     .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+
+  httpd_uri_t health_uri = {
+    .uri = "/health",
+    .method = HTTP_GET,
+    .handler = health_handler,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = false,
     .handle_ws_control_frames = false,
     .supported_subprotocol = NULL
 #endif
@@ -998,7 +1020,7 @@ bool startCameraServer() {
   }
 
   httpd_uri_t *cameraUris[] = {
-    &index_uri, &cmd_uri, &status_uri, &capture_uri, &bmp_uri, &metrics_uri,
+    &index_uri, &health_uri, &cmd_uri, &status_uri, &capture_uri, &bmp_uri, &metrics_uri,
     &xclk_uri, &reg_uri, &greg_uri, &pll_uri, &win_uri
   };
   for (httpd_uri_t *uri : cameraUris) {

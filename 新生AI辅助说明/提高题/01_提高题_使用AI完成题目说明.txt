@@ -73,8 +73,9 @@ macOS 操作顺序：
 4. 打开 `project/CameraWebServer_for_fr`，Target 选择 `esp32s3`；
 5. 选择 `/dev/cu.*` 串口；
 6. 依次执行 Build、Flash、Monitor（115200）；
-7. 电脑连接 `esp32s3cam-xxxx`，密码 `11223344`；
-8. 浏览器访问 `http://192.168.4.1/`。
+7. 在电脑还可以上网时先下载所需的 Camera Viewer 发布包，然后电脑连接 `esp32s3cam-xxxx`，密码 `11223344`；
+8. 双击 Camera Viewer：Windows 使用 GitHub Releases 的 `Camera-Viewer-Windows.exe`，macOS 解压 `Camera-Viewer-macOS.zip` 后打开 `Camera Viewer.app`；
+9. 如果启动器不可用，浏览器备用地址为 `http://192.168.4.1/`。
 
 让 AI 指导安装时发送：
 
@@ -104,7 +105,9 @@ project/CameraWebServer_for_fr/main/student.cpp
 请一次只指导一个操作，并告诉我成功后应看到什么。如果构建需要联网获取组件，请先说明应出现什么正常提示。出现错误时先让我提供完整输出，不要猜原因。
 【复制结束】
 
-程序启动后，串口 Monitor 使用 115200。推荐用浏览器 Viewer：电脑连接 `esp32s3cam-xxxx`，密码 `11223344`，访问 `http://192.168.4.1/` 查看摄像头、人脸框和 TARGET 标记。Windows 用户如需兼容原来的 Viewer，仍可以使用 `project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe`；不要同时打开两个 Viewer。
+程序启动后，串口 Monitor 使用 115200。请先在有 Internet 时从[仓库 GitHub Releases](https://github.com/Cooper3516833584/ESP32S3_Vision/releases/latest)下载对应启动器：Windows 使用 `Camera-Viewer-Windows.exe`；macOS 下载并解压 `Camera-Viewer-macOS.zip`。随后电脑连接 `esp32s3cam-xxxx`，密码 `11223344`，双击 Camera Viewer。启动器会打开系统默认浏览器，查看摄像头、人脸框和 TARGET 标记。
+
+如果启动器无法使用，浏览器备用入口为 `http://192.168.4.1/`。Windows 用户如需兼容原来的 Viewer，仍可以使用 `project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe`；旧 exe 与浏览器 Viewer 共用单客户端视频流，请勿同时打开。
 
 连接 `esp32s3cam-xxxx` 后，Windows 或 macOS 都可能提示“无 Internet”“没有互联网连接”或“此网络无法访问互联网”，这是正常现象。ESP32-S3 提供的是电脑与开发板直接通信的本地 Wi-Fi 热点，不提供互联网。请确认当前 Wi-Fi 名称仍为 `esp32s3cam-xxxx`。
 
@@ -160,7 +163,7 @@ project/CameraWebServer_for_fr/main/student.cpp
 
 启动失败、不断复位、摄像头失败或热点不出现时，提供从按下复位开始的完整 115200 串口日志、开发板型号、摄像头信息和 board_config.h。要求 AI 先判断还缺什么证据，不要直接猜驱动、供电、引脚或内存原因。
 
-浏览器 Viewer 没有画面时，告诉 AI：操作系统和版本、电脑 CPU、当前 Wi-Fi 名称、系统是否提示没有 Internet、页面上的连接状态、串口是否有连接或断开信息，以及浏览器能否访问 `http://192.168.4.1/`。让 AI 一次检查一项。
+浏览器 Viewer 没有画面时，先告诉 AI 双击 Camera Viewer 后看到什么：A. 已自动打开画面；B. 提示没有找到 ESP32-S3 Camera；C. App 无法打开；D. 浏览器打开但没有视频。再提供操作系统和版本、电脑 CPU、当前 Wi-Fi 名称、系统是否提示没有 Internet、页面上的连接状态、串口是否有连接或断开信息，以及浏览器能否访问 `http://192.168.4.1/`。让 AI 一次检查一项。如果 macOS 报 Gatekeeper 错误，先提供完整错误原文；不要先运行 Terminal 命令或关闭系统安全功能。
 
 九 人脸功能不符合题目时怎么问
 

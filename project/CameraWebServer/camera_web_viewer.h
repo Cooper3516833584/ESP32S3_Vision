@@ -4,7 +4,7 @@
 // 20-byte little-endian header) and PackBits decoding mirror raw_frame_codec.h.
 static const char CAMERA_WEB_VIEWER_HTML[] = R"HTML(<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ESP32-S3 Camera Viewer</title><style>
+<meta name="esp32s3-vision-viewer" content="1"><title>ESP32-S3 Camera Viewer</title><style>
 :root{color-scheme:dark;font:16px system-ui,sans-serif;background:#10151b;color:#e8eef5}body{max-width:900px;margin:24px auto;padding:0 16px}h1{font-size:1.5rem}button{padding:9px 14px;margin:4px;border:0;border-radius:6px;background:#2878d0;color:white;cursor:pointer}button.secondary{background:#495563}.status{padding:10px;background:#202a35;border-radius:6px;margin:12px 0;white-space:pre-line}.dot{color:#9aa7b4}.ok{color:#62d394}.bad{color:#ff8585}.viewer{width:min(100%,640px);aspect-ratio:4/3;background:#000;display:block;image-rendering:pixelated}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin:12px 0}.stat{background:#202a35;padding:9px;border-radius:5px}.stat b{display:block;color:#8ebfff;font-size:.82rem}.note{color:#b8c5d2;font-size:.92rem}
 </style></head><body><h1>ESP32-S3 Camera Viewer</h1>
 <p class="note">请连接 ESP32-S3 自建 Wi-Fi：<b>esp32s3cam-xxxx</b>，密码 11223344。默认地址 192.168.4.1。该网络没有 Internet 属于正常现象。</p>

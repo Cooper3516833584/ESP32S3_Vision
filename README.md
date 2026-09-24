@@ -8,13 +8,23 @@
 
 ## 查看摄像头
 
-推荐：连接开发板的 `esp32s3cam-xxxx` Wi-Fi 后，用 Safari、Chrome 或 Edge 打开：
+推荐使用 Camera Viewer 启动器。请先在有 Internet 时从[仓库 GitHub Releases](https://github.com/Cooper3516833584/ESP32S3_Vision/releases/latest)下载当前版本，再连接 ESP32 热点：
+
+- Windows：`Camera-Viewer-Windows.exe`
+- macOS：下载并解压 `Camera-Viewer-macOS.zip`，双击其中的 `Camera Viewer.app`
+
+电脑连接开发板的 `esp32s3cam-xxxx` Wi-Fi 后，双击启动器即可。它会检查设备并打开系统默认浏览器，不会读取或占用视频流。该 Wi-Fi 没有 Internet 属于正常现象。
+Windows 发布版包含所需 .NET Runtime，不需要另行安装。
+
+浏览器备用入口：
 
 ```text
 http://192.168.4.1/
 ```
 
-该 Wi-Fi 没有 Internet 属于正常现象。Windows 兼容工具 `CameraStreamViewer.exe` 仍保留。
+Windows 原 `CameraStreamViewer.exe` 仍保留为兼容工具。它与浏览器 Viewer 共用单客户端视频流，请勿与浏览器 Viewer 同时打开。
+
+macOS 首次打开未签名应用时，在 Finder 中右键 `Camera Viewer.app` →“打开”→ 再确认“打开”。不要关闭 Gatekeeper。
 
 ## 基础题固定环境
 

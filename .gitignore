@@ -18,6 +18,9 @@ url.txt
 .*
 !.gitignore
 !.gitattributes
+!.github/
+!.github/workflows/
+!.github/workflows/camera-viewer-release.yml
 
 # ---------- 构建产物与编译缓存 ----------
 # Arduino / PlatformIO / ESP-IDF 构建缓存

@@ -1,0 +1,69 @@
+name: Build Camera Viewer launchers
+
+on:
+  push:
+    tags:
+      - "camera-viewer-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish self-contained Windows launcher
+        shell: pwsh
+        run: |
+          dotnet publish project/CameraWebServer/tools/camera-viewer-launcher/Windows/CameraViewer.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true `
+            -o publish
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./publish/CameraViewer.exe --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item publish/CameraViewer.exe publish/Camera-Viewer-Windows.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-launcher
+          path: publish/Camera-Viewer-Windows.exe
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal macOS app and package
+        run: bash project/CameraWebServer/tools/camera-viewer-launcher/macOS/build_app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-launcher
+          path: project/CameraWebServer/tools/camera-viewer-launcher/macOS/dist/Camera-Viewer-macOS.zip
+          if-no-files-found: error
+
+  release:
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-launcher
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-launcher
+          path: release-assets
+      - name: Publish GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            release-assets/Camera-Viewer-Windows.exe \
+            release-assets/Camera-Viewer-macOS.zip \
+            --title "ESP32S3_Vision Camera Viewer $RELEASE_TAG" \
+            --notes "Camera Viewer launcher binaries. macOS first launch may require Finder → right-click → Open because this build is not Developer ID signed or notarized."
