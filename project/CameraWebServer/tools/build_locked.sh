@@ -22,10 +22,13 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --upload) upload=1; shift ;;
     --port)
-      [ "$#" -ge 2 ] || { usage >&2; fail "--port 后面需要填写串口路径。"; }
-      port="$2"; shift 2 ;;
+      [ "$#" -ge 2 ] || fail "--port 后必须提供串口路径。"
+      port="$2"
+      case "$port" in --*) fail "--port 后必须提供串口路径。" ;; esac
+      [ -n "$port" ] || fail "--port 后必须提供串口路径。"
+      shift 2 ;;
     --help|-h) usage; exit 0 ;;
-    *) usage >&2; fail "不支持的参数：$1" ;;
+    *) printf 'Unknown argument: %s\n' "$1" >&2; usage >&2; exit 1 ;;
   esac
 done
 
@@ -37,7 +40,8 @@ case "$cpu_name" in
   x86_64) cpu_label="Intel (x86_64)" ;;
   *) cpu_label="$cpu_name" ;;
 esac
-printf '系统：macOS\nCPU：%s\n' "$cpu_label"
+macos_version=$(sw_vers -productVersion 2>/dev/null || printf '未知')
+printf '系统：macOS %s\nCPU：%s\n' "$macos_version" "$cpu_label"
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
 project_dir=$(cd "$script_dir/.." && pwd)
@@ -52,6 +56,13 @@ for candidate in \
 done
 if [ -z "$cli" ] && command -v arduino-cli >/dev/null 2>&1; then cli=$(command -v arduino-cli); fi
 if [ -z "$cli" ]; then
+  for app_dir in "/Applications/Arduino IDE.app" "$HOME/Applications/Arduino IDE.app"; do
+    [ -d "$app_dir/Contents" ] || continue
+    found_cli=$(find "$app_dir/Contents" -type f -name arduino-cli -perm -111 -print 2>/dev/null | awk 'NR==1 {print; exit}')
+    if [ -n "$found_cli" ]; then cli="$found_cli"; break; fi
+  done
+fi
+if [ -z "$cli" ]; then
   cat >&2 <<'EOF'
 错误：没有找到 Arduino IDE 2.x。
 
@@ -62,8 +73,15 @@ macOS 正常位置：/Applications/Arduino IDE.app
 EOF
   exit 1
 fi
+printf 'Arduino CLI: %s\n' "$cli"
 
-core_json=$("$cli" core list --format json 2>&1) || { printf '%s\n' "$core_json" >&2; fail "无法读取 Arduino Core 列表。请检查 Arduino IDE 安装。"; }
+if ! core_json=$("$cli" core list --format json 2>&1); then
+  printf '%s\n' "$core_json" >&2
+  if printf '%s\n' "$core_json" | grep -qi 'bad CPU type in executable'; then
+    fail "检测到 bad CPU type in executable。请检查 Mac 芯片类型，以及 Arduino IDE 是否为对应架构版本。"
+  fi
+  fail "无法读取 Arduino Core 列表。请检查 Arduino IDE 安装。"
+fi
 core_version=$(printf '%s' "$core_json" | awk '
   /"id"[[:space:]]*:[[:space:]]*"esp32:esp32"/ { found=1 }
   found && /"installed_version"[[:space:]]*:/ {
@@ -83,6 +101,7 @@ if [ "$core_version" != "3.3.7" ]; then
   printf '错误：当前 ESP32 Core 版本是 %s。\n\n本题要求严格使用 esp32 by Espressif Systems 3.3.7。\n请在 Arduino IDE 的开发板管理器中切换到 3.3.7。\n' "$core_version" >&2
   exit 1
 fi
+printf 'ESP32 Core: %s\n' "$core_version"
 
 if [ "$upload" -eq 1 ]; then
   if [ -n "$port" ]; then
@@ -90,14 +109,22 @@ if [ "$upload" -eq 1 ]; then
     [ -e "$port" ] || fail "指定的串口不存在：$port"
   else
     ports=()
+    preferred_ports=()
+    port_count=0
+    preferred_count=0
     for candidate in /dev/cu.*; do
       [ -e "$candidate" ] || continue
       case "$candidate" in
-        /dev/cu.Bluetooth-Incoming-Port) continue ;;
-        *usbmodem*|*usbserial*|*SLAB_USBtoUART*|*wchusbserial*|*wch*|*usb*) ports+=("$candidate") ;;
+        *Bluetooth*) continue ;;
+      esac
+      ports+=("$candidate")
+      port_count=$((port_count + 1))
+      case "$candidate" in
+        *usbmodem*|*usbserial*|*SLAB_USBtoUART*|*wchusbserial*|*wch*|*usb*) preferred_ports+=("$candidate"); preferred_count=$((preferred_count + 1)) ;;
       esac
     done
-    if [ "${#ports[@]}" -eq 0 ]; then
+    if [ "$preferred_count" -gt 0 ]; then ports=("${preferred_ports[@]}"); port_count=$preferred_count; fi
+    if [ "$port_count" -eq 0 ]; then
       cat >&2 <<'EOF'
 没有检测到可用的 USB 串口。
 
@@ -110,7 +137,7 @@ if [ "$upload" -eq 1 ]; then
 不知道 USB-UART 芯片型号时不要随便安装驱动。
 EOF
       exit 1
-    elif [ "${#ports[@]}" -eq 1 ]; then
+    elif [ "$port_count" -eq 1 ]; then
       printf '检测到开发板串口：\n\n%s\n\n按回车使用该串口。如果这不是你的开发板，请输入 n：' "${ports[0]}"
       read -r answer
       if [ "$answer" = "n" ] || [ "$answer" = "N" ]; then
@@ -125,7 +152,7 @@ EOF
       printf '\n请输入序号：'
       read -r selection
       case "$selection" in ''|*[!0-9]*) fail "串口序号无效。" ;; esac
-      [ "$selection" -ge 1 ] && [ "$selection" -le "${#ports[@]}" ] || fail "串口序号超出范围。"
+      [ "$selection" -ge 1 ] && [ "$selection" -le "$port_count" ] || fail "串口序号超出范围。"
       port=${ports[$((selection - 1))]}
     fi
     case "$port" in /dev/cu.*) ;; *) fail "串口路径应使用 macOS 的 /dev/cu.* 形式：$port" ;; esac
@@ -181,7 +208,12 @@ check_s3_image() {
   tool_status=$?
   set -e
   printf '%s\n' "$tool_output"
-  [ "$tool_status" -eq 0 ] || fail "esptool 无法检查固件：$image_file"
+  if [ "$tool_status" -ne 0 ]; then
+    if printf '%s\n' "$tool_output" | grep -qi 'bad CPU type in executable'; then
+      fail "检测到 bad CPU type in executable。请检查 Mac 芯片类型，以及 Arduino IDE 是否为对应架构版本。"
+    fi
+    fail "esptool 无法检查固件：$image_file"
+  fi
   printf '%s\n' "$tool_output" | grep -E 'Detected image type: *ESP32-S3' >/dev/null || fail "拒绝使用固件：目标不是 ESP32-S3。"
   printf '%s\n' "$tool_output" | grep -E 'Chip ID: *9 \(ESP32-S3\)' >/dev/null || fail "拒绝使用固件：芯片 ID 不是 ESP32-S3。"
 }
@@ -210,7 +242,7 @@ if [ "$upload" -eq 1 ]; then
   upload_status=$?
   set -e
   if [ "$upload_status" -ne 0 ]; then
-    printf '\n烧录失败。上方保留了 Arduino CLI 完整输出。\n请把从“开始烧录”到当前行的完整输出发送给 AI，并提供：\n- 当前串口：%s\n- 开发板型号\n- 是否按过 BOOT / RESET\n- Arduino IDE 中是否能看到同一串口\n' "$port" >&2
+    printf '\n烧录失败。上方保留了 Arduino CLI 完整输出。\n如果出现 bad CPU type in executable，请核对 Mac 芯片类型和 Arduino IDE 架构。\n请把从“开始烧录”到当前行的完整输出发送给 AI，并提供：\n- 当前串口：%s\n- 开发板型号\n- 是否按过 BOOT / RESET\n- Arduino IDE 中是否能看到同一串口\n' "$port" >&2
     exit "$upload_status"
   fi
 fi

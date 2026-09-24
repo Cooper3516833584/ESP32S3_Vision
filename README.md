@@ -1,10 +1,10 @@
 # ESP32S3_Vision
 
-## 支持平台
+## 目标平台
 
-基础题：Windows、macOS Apple Silicon、macOS Intel。
+基础题工具提供 Windows、macOS Apple Silicon 和 macOS Intel 使用流程。macOS 实机验证记录见下文。
 
-提高题：Windows、macOS（使用 VS Code 与 Espressif IDF 扩展）。
+提高题使用 Windows 或 macOS 上的 VS Code 与 Espressif IDF 扩展。
 
 ## 查看摄像头
 
@@ -14,14 +14,15 @@
 http://192.168.4.1/
 ```
 
-该 Wi-Fi 没有 Internet 属于正常现象。Windows 原有 `CameraStreamViewer.exe` 仍保留。
+该 Wi-Fi 没有 Internet 属于正常现象。Windows 兼容工具 `CameraStreamViewer.exe` 仍保留。
 
 ## 基础题固定环境
 
 - Arduino IDE 2.x
 - esp32 by Espressif Systems 3.3.7
 - Flash 4 MB，DIO 40 MHz，OPI PSRAM
-- macOS 用户运行 `project/CameraWebServer/tools` 中的 `.command` 工具
+- Windows：运行 `project/CameraWebServer/tools` 中的 `.cmd` 工具
+- macOS：运行同一目录中带 `macOS` 字样的 `.command` 工具
 
 ## 提高题固定环境
 
@@ -29,5 +30,10 @@ http://192.168.4.1/
 - Espressif IDF 扩展
 - ESP-IDF 5.5.5
 - target：ESP32-S3 (`esp32s3`)
+
+## 已验证环境
+
+- 实机验证记录待补充；目前没有真实 Mac + ESP32-S3 的编译、烧录和浏览器 Viewer 验收记录。
+- 本机执行过 Bash 静态检查、模拟 Arduino CLI 错误分支、浏览器 raw decoder、断线重连和 Raw/MJPEG 切换检查；这些不代表 Mac 实机验证。
 
 新生 macOS 操作步骤见 [macOS 新生快速开始](新生AI辅助说明/macOS_新生快速开始.md)。

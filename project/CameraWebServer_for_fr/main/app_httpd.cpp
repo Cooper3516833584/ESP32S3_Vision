@@ -225,8 +225,9 @@ static esp_err_t stream_handler(httpd_req_t *req) {
   if (!stream_client_active.compare_exchange_strong(expected, true)) {
     httpd_resp_set_status(req, "503 Service Unavailable");
     httpd_resp_set_type(req, "text/plain");
-    httpd_resp_set_hdr(req, "Retry-After", "1");
+    httpd_resp_set_hdr(req, "Retry-After", "5");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
     return httpd_resp_sendstr(req, "A low-latency stream client is already connected.\n");
   }
 #else
@@ -352,6 +353,9 @@ static esp_err_t raw_stream_handler(httpd_req_t *req) {
   bool expected = false;
   if (!stream_client_active.compare_exchange_strong(expected, true)) {
     httpd_resp_set_status(req, "503 Service Unavailable");
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_set_hdr(req, "Retry-After", "5");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_sendstr(req, "A stream client is already connected.\n");
   }

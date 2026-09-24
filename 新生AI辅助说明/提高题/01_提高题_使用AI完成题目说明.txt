@@ -12,6 +12,8 @@ ESP32S3CAM 嵌入式视觉系统 提高题 使用 AI 完成题目说明
 
 每次新建网页 AI 对话时，先上传题目和底座程序说明。需要 AI 写代码时，再上传当前 student.cpp。网页 AI 看不到你电脑中的其他文件；如果它需要头文件或报错中提到的文件，应让它先向你索要，不能让它按其他版本的 ESP-DL 示例猜写。
 
+这里的“串口”是电脑与开发板通信的 USB 设备名称。Windows 常见 `COM5`；macOS 常见 `/dev/cu.usbmodem1101` 或 `/dev/cu.usbserial-xxxx`。后文统一称“串口”。
+
 二 首先发给 AI 的固定要求
 
 【复制给 AI】
@@ -21,7 +23,7 @@ ESP32S3CAM 嵌入式视觉系统 提高题 使用 AI 完成题目说明
 
 禁止猜测我的操作系统、开发板型号、ESP-IDF 环境、组件版本、头文件内容、函数参数、检测结果字段或报错原因。如果继续回答所需的信息不足，请先提出具体问题，等待我回复或上传文件后再解答。需要查看文件时，请告诉我准确路径以及要上传整个文件还是其中哪一段。
 
-开始操作前先确认我使用 Windows 还是 macOS；macOS 步骤使用 `/dev/cu.*` 串口和浏览器 Viewer，不要要求我运行 Windows `.exe`。
+开始操作前先确认我的操作系统和版本，以及电脑 CPU：Windows / macOS；Apple Silicon / Intel / 不清楚。macOS 步骤使用 `/dev/cu.*` 串口和浏览器 Viewer，不要要求我运行 Windows `.exe`。
 
 你可以给出能够直接使用的 student.cpp，但必须说明替换哪个文件，并确保只修改 main/student.cpp。不得编造工程中不存在的接口，也不得把其他版本组件的示例直接当成当前版本可用代码。对组件 API 不确定时，先让我上传编译后生成的对应头文件或完整编译错误。
 
@@ -39,7 +41,8 @@ ESP32S3CAM 嵌入式视觉系统 提高题 使用 AI 完成题目说明
 题目要求使用 ESP32-S3 CAM 开发板，Flash 至少 4 MB，PSRAM 至少 8 MB，摄像头模组需与开发板兼容。准备开发板正反面照片、商品完整型号和摄像头型号；不知道的信息直接写“不知道”，不要自己猜。
 
 【复制给 AI】
-我的电脑系统是：[填写]
+我的操作系统和版本是：[Windows / macOS，以及版本]
+电脑 CPU 是：[Apple Silicon / Intel / 不清楚]
 开发板商品名称或型号是：[填写]
 Flash 容量是：[填写或不知道]
 PSRAM 容量是：[填写或不知道]
@@ -62,10 +65,21 @@ PSRAM 容量是：[填写或不知道]
 
 Windows 和 macOS 均可使用这套 VS Code + Espressif IDF 扩展流程。macOS 用户安装 macOS 版 VS Code 和 Espressif IDF 扩展，在扩展中配置 ESP-IDF 5.5.5。打开 `project/CameraWebServer_for_fr` 后确认 target 为 `esp32s3`，串口从 `/dev/cu.*` 设备中选择，再执行 Build、Flash、Monitor。Monitor 波特率为 115200。
 
+macOS 操作顺序：
+
+1. 安装 macOS 版 VS Code；
+2. 安装 Espressif IDF 扩展；
+3. 在扩展中配置 ESP-IDF 5.5.5；
+4. 打开 `project/CameraWebServer_for_fr`，Target 选择 `esp32s3`；
+5. 选择 `/dev/cu.*` 串口；
+6. 依次执行 Build、Flash、Monitor（115200）；
+7. 电脑连接 `esp32s3cam-xxxx`，密码 `11223344`；
+8. 浏览器访问 `http://192.168.4.1/`。
+
 让 AI 指导安装时发送：
 
 【复制给 AI】
-请指导我从当前电脑状态开始安装提高题环境。我的系统是：[填写]，VS Code 状态是：[未安装／已安装，版本为……]，Espressif IDF 扩展状态是：[填写]，ESP-IDF 状态是：[填写]。
+请指导我从当前电脑状态开始安装提高题环境。我的操作系统和版本是：[Windows / macOS，以及版本]，电脑 CPU 是：[Apple Silicon / Intel / 不清楚]，VS Code 状态是：[未安装／已安装，版本为……]，Espressif IDF 扩展状态是：[填写]，ESP-IDF 状态是：[填写]。
 
 目标是让 project/CameraWebServer_for_fr 使用 ESP-IDF 5.5.5 构建。请一次只给一个安装或配置步骤，说明在 VS Code 的哪个界面操作、如何确认当前步骤成功，以及下一步需要我发什么截图。不要假定我已经安装 Python、Git、驱动或旧版 ESP-IDF；先询问再判断。
 【复制结束】
@@ -85,12 +99,14 @@ project/CameraWebServer_for_fr/main/student.cpp
 先不要修改 student.cpp，要求 AI 指导你原样编译和烧录。这样可以确认环境、组件、摄像头和视频底座是否能够工作。
 
 【复制给 AI】
-我已打开 project/CameraWebServer_for_fr，目前没有修改代码。请先询问我的系统是 Windows 还是 macOS。指导 macOS 用户选择 `/dev/cu.*` 串口；Windows 用户选择对应串口。然后使用 VS Code 的 Espressif IDF 扩展确认 ESP-IDF 是 5.5.5、目标芯片是 esp32s3，并原样 Build、Flash 和 Monitor（115200）。
+我的操作系统和版本是：[Windows / macOS，以及版本]；电脑 CPU 是：[Apple Silicon / Intel / 不清楚]。我已打开 project/CameraWebServer_for_fr，目前没有修改代码。请按我的系统指导我选择串口，然后使用 VS Code 的 Espressif IDF 扩展确认 ESP-IDF 是 5.5.5、目标芯片是 esp32s3，并原样 Build、Flash 和 Monitor（115200）。
 
 请一次只指导一个操作，并告诉我成功后应看到什么。如果构建需要联网获取组件，请先说明应出现什么正常提示。出现错误时先让我提供完整输出，不要猜原因。
 【复制结束】
 
-程序启动后，串口 Monitor 使用 115200。电脑连接开发板建立的 esp32s3cam-xxxx 热点，密码为 11223344，然后用浏览器访问 http://192.168.4.1/ 查看摄像头、人脸框和 TARGET 标记。Wi-Fi 提示没有 Internet 属于正常现象；确认当前 SSID 为 esp32s3cam-xxxx。Windows 用户也可以继续使用 `project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe`；macOS 不需要该 exe。
+程序启动后，串口 Monitor 使用 115200。推荐用浏览器 Viewer：电脑连接 `esp32s3cam-xxxx`，密码 `11223344`，访问 `http://192.168.4.1/` 查看摄像头、人脸框和 TARGET 标记。Windows 用户如需兼容原来的 Viewer，仍可以使用 `project/CameraWebServer_for_fr/tools/CameraStreamViewer.exe`；不要同时打开两个 Viewer。
+
+连接 `esp32s3cam-xxxx` 后，Windows 或 macOS 都可能提示“无 Internet”“没有互联网连接”或“此网络无法访问互联网”，这是正常现象。ESP32-S3 提供的是电脑与开发板直接通信的本地 Wi-Fi 热点，不提供互联网。请确认当前 Wi-Fi 名称仍为 `esp32s3cam-xxxx`。
 
 六 让 AI 编写提高题代码
 
@@ -122,6 +138,7 @@ project/CameraWebServer_for_fr/main/student.cpp
 把修改后的完整 student.cpp 和编译输出一起发给 AI。编译输出应从本次 Build 开始保留，至少要包括第一个 error 前后的内容。
 
 【复制给 AI】
+我的操作系统和版本是：[Windows / macOS，以及版本]；电脑 CPU 是：[Apple Silicon / Intel / 不清楚]。ESP-IDF 版本是：[填写，应为 5.5.5]。
 这是当前完整 main/student.cpp 和本次 Build 的完整输出。请先找到第一个实际错误，区分它属于组件下载、头文件、命名空间、类或函数声明、类型不匹配、链接还是固件配置。
 
 如果现有输出不足，请先告诉我还要上传哪个文件或哪段声明。确认真实接口后，给出新的完整 student.cpp，并说明相比上一版修改了什么。不要让我修改其他工程文件来绕过 student.cpp 的错误。
@@ -133,7 +150,9 @@ project/CameraWebServer_for_fr/main/student.cpp
 
 烧录失败时提供：
 
-- 实际串口（Windows 常见 COM5；macOS 常见 `/dev/cu.usbmodemxxxx`）。
+- 操作系统和版本、电脑 CPU（Apple Silicon / Intel / 不清楚）。
+- ESP-IDF 版本。
+- 当前串口（Windows 示例 `COM5`；macOS 示例 `/dev/cu.usbmodem1101`）。
 - VS Code 状态栏或设备选择截图。
 - Flash 任务的完整输出。
 - 开发板连接状态、指示灯和你按过的按键。
@@ -141,7 +160,7 @@ project/CameraWebServer_for_fr/main/student.cpp
 
 启动失败、不断复位、摄像头失败或热点不出现时，提供从按下复位开始的完整 115200 串口日志、开发板型号、摄像头信息和 board_config.h。要求 AI 先判断还缺什么证据，不要直接猜驱动、供电、引脚或内存原因。
 
-Viewer 没有画面时，告诉 AI：电脑当前连接的 Wi-Fi 名称、是否显示无 Internet、Viewer 窗口现象、串口是否有连接或断开信息，以及浏览器能否访问 192.168.4.1。让 AI 一次检查一项。
+浏览器 Viewer 没有画面时，告诉 AI：操作系统和版本、电脑 CPU、当前 Wi-Fi 名称、系统是否提示没有 Internet、页面上的连接状态、串口是否有连接或断开信息，以及浏览器能否访问 `http://192.168.4.1/`。让 AI 一次检查一项。
 
 九 人脸功能不符合题目时怎么问
 
@@ -149,13 +168,13 @@ Viewer 没有画面时，告诉 AI：电脑当前连接的 Wi-Fi 名称、是否
 
 - 当前完整 student.cpp。
 - 从复位开始的串口日志。
-- Viewer 完整截图；如果现象会变化，可描述发生顺序。
+- 浏览器 Viewer 完整截图；如果现象会变化，可描述发生顺序。
 - 当前画面中的人员是首次出现的人、目标再次出现还是另一名人员。
 - 人脸距离、光照、是否完整进入画面。
 - 复位后从第一张人脸开始实际做过的操作。
 
 【复制给 AI】
-程序能够运行，但目前最明显的问题是：[填写一种实际现象]。我附上当前 student.cpp、复位后的串口日志和 Viewer 截图。我的操作顺序是：[按实际顺序填写]。
+我的操作系统和版本是：[Windows / macOS，以及版本]；电脑 CPU 是：[Apple Silicon / Intel / 不清楚]。程序能够运行，但目前最明显的问题是：[填写一种实际现象]。我附上当前 student.cpp、复位后的串口日志和浏览器 Viewer 截图。我的操作顺序是：[按实际顺序填写]。
 
 请先对照最终 H 题 PDF 判断没有达到哪一项。信息不足时先问我需要重新复位、换人、离开再返回、移走人脸或改变拍摄条件中的哪一项，并等待结果。确认现象后，再修改当前 student.cpp。请给出完整文件，不要同时改动与这个现象无关的部分。
 【复制结束】
@@ -165,6 +184,7 @@ Viewer 没有画面时，告诉 AI：电脑当前连接的 Wi-Fi 名称、是否
 十 完成前让 AI 对照题目检查
 
 【复制给 AI】
+我的操作系统是：[Windows / macOS，以及版本]；电脑 CPU 是：[Apple Silicon / Intel / 不清楚]。
 请只依据最终 H 题 PDF 的提高部分，逐项检查我上传的最终 student.cpp、复位后的操作过程和 Viewer 截图。指出没有达到或无法确认的项目。无法确认时先告诉我还需要进行哪个简单的现场操作或补充哪张截图，不要假定已经通过。
 
 然后请用新生能够理解的语言解释最终 student.cpp 中 studentInit()、studentProcessFrame()、人脸检测、首次记录、后续识别、人脸框和 TARGET 标签之间的主要关系，帮助我准备现场说明。

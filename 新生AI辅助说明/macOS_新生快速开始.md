@@ -30,14 +30,16 @@ Arduino IDE → 工具 → 开发板 → 开发板管理器，搜索 `esp32`，�
 bash "project/CameraWebServer/tools/build_locked.sh" --upload --port /dev/cu.usbmodemXXXX
 ```
 
-如果 Finder 提示不能执行，可在仓库根目录的终端执行一次：
+如果 macOS 首次阻止 `.command`，可在 Finder 中右键该文件 →“打开”→ 再确认打开。不要关闭 Gatekeeper 或系统安全设置。
+
+如果 Finder 提示文件没有执行权限，可在仓库根目录的终端执行一次：
 
 ```bash
 chmod +x "project/CameraWebServer/tools/build_locked.sh"
 chmod +x "project/CameraWebServer/tools/"*.command
 ```
 
-不需要 sudo，也不要关闭 Gatekeeper。
+不需要 sudo。
 
 ## 7. Mac 串口是什么样
 
@@ -66,7 +68,7 @@ http://192.168.4.1/
 - **Arduino IDE 或工具报告 `bad CPU type in executable`**：先确认 Mac 芯片类型、Arduino IDE 是否下载了 Apple Silicon 版，以及错误来自 IDE 本身还是具体工具。不要先重装全部环境。Rosetta 仅作为某个必需 Intel-only 工具的后备方案。
 - **没有串口**：确认数据线、Arduino IDE 的端口列表和开发板 USB 芯片型号；不知道芯片时先提供照片和商品型号，不要猜驱动。
 - **构建提示 Core 版本不对**：检查开发板管理器中 `esp32 by Espressif Systems` 是否恰为 3.3.7。
-- **查看器提示其他 Viewer 占用**：关闭 `CameraStreamViewer.exe` 和其他打开视频的浏览器标签页，再点“重新连接”。
+- **查看器提示其他 Viewer 占用**：关闭其他打开视频的浏览器标签页和视频软件；Windows 兼容工具 `CameraStreamViewer.exe` 也会占用视频流。然后点“重新连接”。
 - **烧录失败**：保留完整 CLI 输出，并记录串口、板卡型号、是否按过 BOOT/RESET、Arduino IDE 是否显示同一串口。不要只凭错误末尾判断驱动或线材问题。
 
 ## 12. 发给 AI 排错时需要提供什么
