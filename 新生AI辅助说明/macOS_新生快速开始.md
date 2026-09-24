@@ -55,7 +55,7 @@ Windows 常见 `COM5`；macOS 常见 `/dev/cu.usbmodem1101`、`/dev/cu.usbserial
 
 首次打开如果 macOS 提示无法验证开发者，在 Finder 中右键 `Camera Viewer.app` →“打开”→ 再确认“打开”。不要关闭 Gatekeeper。Launcher 需要访问本地网络以检查 ESP32；系统若询问，请允许。
 
-如果启动器无法使用，Safari 或 Chrome 可以直接访问备用地址：
+如果 Releases 页面暂时没有启动器 ZIP，或启动器无法使用，Safari 或 Chrome 可以直接访问备用地址：
 
 ```text
 http://192.168.4.1/

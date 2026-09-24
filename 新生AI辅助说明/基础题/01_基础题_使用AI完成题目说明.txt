@@ -119,7 +119,7 @@ macOS 用户只运行 `.command` 工具，不运行 Windows 的 `.cmd`、`.ps1` 
 
 电脑应连接 `esp32s3cam-xxxx`，密码 `11223344`。启动器会检测开发板并打开系统默认浏览器，不会占用视频流。如果 macOS 首次阻止 App，在 Finder 中右键 `Camera Viewer.app` →“打开”→ 再确认“打开”；不要关闭 Gatekeeper。
 
-如果启动器不能使用，手动浏览器备用入口为 `http://192.168.4.1/`。Windows 用户也可继续使用原 `tools/CameraStreamViewer.exe` 兼容工具；它和浏览器 Viewer 只能开一个。
+如果 Releases 页面暂时没有对应发布包，或启动器不能使用，手动浏览器备用入口为 `http://192.168.4.1/`。Windows 用户也可继续使用原 `tools/CameraStreamViewer.exe` 兼容工具；它和浏览器 Viewer 只能开一个。
 
 请先询问我当前 Arduino IDE、ESP32 Core、串口和开发板情况，然后一次指导一个操作。每一步告诉我应该打开哪个文件、运行哪个工具，以及完成后要把什么日志或截图发给你。不要根据一句“失败了”猜原因。
 【复制结束】
