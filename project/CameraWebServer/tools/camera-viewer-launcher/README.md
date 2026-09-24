@@ -28,3 +28,5 @@ Run the executable with `--self-test` to check the health-response validator. Th
 ## Release packaging
 
 Push a tag matching `camera-viewer-v*`. The GitHub Actions workflow builds both launchers and publishes `Camera-Viewer-Windows.exe` plus `Camera-Viewer-macOS.zip` as Release assets. GitHub Actions builds macOS binaries on macOS; a Windows checkout cannot compile the AppKit application locally.
+
+If a tag push does not start the workflow (for example, Actions are disabled in repository settings), enable Actions and use **Actions → Build Camera Viewer launchers → Run workflow**, selecting the release tag. Running against a tag publishes the two assets; running against `main` only builds and stores Actions artifacts.

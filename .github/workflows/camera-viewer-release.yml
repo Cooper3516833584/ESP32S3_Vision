@@ -1,6 +1,7 @@
 name: Build Camera Viewer launchers
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
