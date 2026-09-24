@@ -72,12 +72,9 @@ try {
         '--build-property', 'build.img_freq=40m',
         '--build-property', 'build.flash_freq=40m'
     )
-    if ($Upload) {
-        $arguments += @('--upload', '--port', $Port)
-    }
     $arguments += $mappedProject
 
-    $phase = if ($Upload) { 'Compiling and uploading' } else { 'Compiling' }
+    $phase = 'Compiling'
     $spinner = @('|', '/', '-', '\')
     $startedAt = Get-Date
     $argumentsJson = ConvertTo-Json -InputObject @($arguments) -Compress
@@ -172,5 +169,21 @@ Write-Host ''
 Write-Host 'LOCKED CONFIG VERIFIED: ESP32-S3 / DIO / 40 MHz / 4 MB / OPI PSRAM' -ForegroundColor Green
 Write-Host "Build directory: $buildDir"
 if ($Upload) {
+    # Upload only after both images pass the locked-config checks above.
+    # Recreate the ASCII mapping because esptool may also reject non-ASCII paths.
+    try {
+        & subst.exe $mappedDrive $projectParent
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to create temporary ASCII drive mapping for upload'
+        }
+        & $cli upload --fqbn 'esp32:esp32:esp32s3:FlashMode=dio,FlashSize=4M,PSRAM=opi,PartitionScheme=custom,DebugLevel=none,EraseFlash=all' `
+            --input-dir $mappedBuild --port $Port $mappedProject
+        if ($LASTEXITCODE -ne 0) {
+            throw "Locked Arduino upload failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        & subst.exe $mappedDrive /d 2>$null
+    }
     Write-Host "Upload completed on $Port" -ForegroundColor Green
 }

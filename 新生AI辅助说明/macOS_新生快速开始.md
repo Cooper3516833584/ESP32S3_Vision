@@ -45,23 +45,21 @@ chmod +x "project/CameraWebServer/tools/"*.command
 
 Windows 常见 `COM5`；macOS 常见 `/dev/cu.usbmodem1101`、`/dev/cu.usbserial-0001`。Finder 烧录入口会自动筛选 USB 串口，也可以用 Arduino IDE → 工具 → 端口确认。需要查连接前后变化时，可看“系统信息 → USB”或运行 `ls /dev/cu.*`。
 
-## 8. 下载 Camera Viewer 并连接 ESP32 Wi-Fi
+## 8. 连接 ESP32 Wi-Fi
 
-先在仍可上网时，从[仓库 GitHub Releases](https://github.com/Cooper3516833584/ESP32S3_Vision/releases/latest)下载并解压 `Camera-Viewer-macOS.zip`。烧录并启动后，在 Mac Wi-Fi 菜单连接 `esp32s3cam-xxxx`，密码 `11223344`。系统提示该 Wi-Fi 没有 Internet 属于正常现象；做题时保持连接这个 SSID。
+烧录并启动后，在 Mac Wi-Fi 菜单连接 `esp32s3cam-xxxx`，密码 `11223344`。系统提示该 Wi-Fi 没有 Internet 属于正常现象；做题时保持连接这个 SSID。如果开发板重启后 Mac 自动切回其他 Wi-Fi，请重新选择 `esp32s3cam-xxxx`。
 
-## 9. 双击 Camera Viewer 查看画面
+## 9. 在浏览器查看画面
 
-连接 `esp32s3cam-xxxx` 后，双击 `Camera Viewer.app`。启动器会检测本题设备并交给系统默认浏览器打开 Viewer，不会占用视频流。
-
-首次打开如果 macOS 提示无法验证开发者，在 Finder 中右键 `Camera Viewer.app` →“打开”→ 再确认“打开”。不要关闭 Gatekeeper。Launcher 需要访问本地网络以检查 ESP32；系统若询问，请允许。
-
-如果 Releases 页面暂时没有启动器 ZIP，或启动器无法使用，Safari 或 Chrome 可以直接访问备用地址：
+连接 `esp32s3cam-xxxx` 后，在 Safari 或 Chrome 地址栏输入：
 
 ```text
 http://192.168.4.1/
 ```
 
 页面默认使用低延迟 Raw 流，也可切换 MJPEG 兼容模式。页面显示视频、学生画在 framebuffer 上的标记、处理指标和断线状态。
+
+目前 GitHub 没有可下载的 `Camera Viewer.app` 发布包；完成题目不需要它。
 
 ## 10. 提高题 ESP-IDF 5.5.5
 
@@ -73,10 +71,10 @@ http://192.168.4.1/
 - **没有串口**：确认数据线、Arduino IDE 的端口列表和开发板 USB 芯片型号；不知道芯片时先提供照片和商品型号，不要猜驱动。
 - **构建提示 Core 版本不对**：检查开发板管理器中 `esp32 by Espressif Systems` 是否恰为 3.3.7。
 - **查看器提示其他 Viewer 占用**：关闭其他打开视频的浏览器标签页和视频软件；Windows 兼容工具 `CameraStreamViewer.exe` 也会占用视频流。然后点“重新连接”。
-- **Camera Viewer 提示未找到设备**：确认 Mac 当前连接 `esp32s3cam-xxxx`，等待开发板启动后点“重新检测”。启动器访问到了其他 HTTP 页面时，会说明设备标识不匹配。
-- **macOS 无法打开 App**：先记下错误原文；如果是 Gatekeeper 提示，使用 Finder“右键 → 打开 → 再确认打开”。不要先使用 Terminal、`sudo` 或关闭系统安全设置。
+- **浏览器打不开页面**：确认当前 Wi-Fi 是 `esp32s3cam-xxxx`，再检查地址是否为 `http://192.168.4.1/`。开发板刚复位时等它重启；Mac 若切回其他 Wi-Fi，需重新选择热点。
+- **页面打开但没有视频**：记录页面上的连接状态，关闭其他 Viewer 或浏览器视频标签页，再点“重新连接”。
 - **烧录失败**：保留完整 CLI 输出，并记录串口、板卡型号、是否按过 BOOT/RESET、Arduino IDE 是否显示同一串口。不要只凭错误末尾判断驱动或线材问题。
 
 ## 12. 发给 AI 排错时需要提供什么
 
-先说明基础题或提高题、macOS 版本、Apple Silicon 或 Intel、开发板准确型号、操作步骤和完整错误输出。若是查看画面问题，先说明双击 Camera Viewer 后看到什么：A. 已自动打开画面；B. 提示没有找到设备；C. App 无法打开；D. 浏览器打开但没有视频。烧录问题附串口路径；摄像头/热点问题附从复位开始的完整 115200 日志和开发板照片；画面问题附浏览器截图和当前学生代码。不要让 AI 猜硬件、接口或报错原因；每次先排一个问题。
+先说明基础题或提高题、macOS 版本、Apple Silicon 或 Intel、开发板准确型号、操作步骤和完整错误输出。若是查看画面问题，提供当前 Wi-Fi 名称、浏览器访问 `http://192.168.4.1/` 的结果、页面连接状态与截图。烧录问题附串口路径；摄像头/热点问题附从复位开始的完整 115200 日志和开发板照片；画面问题附当前学生代码。不要让 AI 猜硬件、接口或报错原因；每次先排一个问题。

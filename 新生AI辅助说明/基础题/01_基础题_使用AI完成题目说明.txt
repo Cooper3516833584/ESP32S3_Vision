@@ -112,26 +112,18 @@ macOS 工具：
 
 macOS 用户只运行 `.command` 工具，不运行 Windows 的 `.cmd`、`.ps1` 或 `.exe`。
 
-推荐使用 Camera Viewer 启动器。请先在有 Internet 时从[仓库 GitHub Releases](https://github.com/Cooper3516833584/ESP32S3_Vision/releases/latest)下载当前版本，再连接 ESP32 热点并按系统双击：
-
-- Windows：`Camera-Viewer-Windows.exe`；
-- macOS：解压 `Camera-Viewer-macOS.zip`，双击 `Camera Viewer.app`。
-
-电脑应连接 `esp32s3cam-xxxx`，密码 `11223344`。启动器会检测开发板并打开系统默认浏览器，不会占用视频流。如果 macOS 首次阻止 App，在 Finder 中右键 `Camera Viewer.app` →“打开”→ 再确认“打开”；不要关闭 Gatekeeper。
-
-如果 Releases 页面暂时没有对应发布包，或启动器不能使用，手动浏览器备用入口为 `http://192.168.4.1/`。Windows 用户也可继续使用原 `tools/CameraStreamViewer.exe` 兼容工具；它和浏览器 Viewer 只能开一个。
+Windows / macOS 通用查看方式：电脑连接 `esp32s3cam-xxxx`，密码 `11223344`，然后在浏览器打开 `http://192.168.4.1/`。Windows 用户也可继续使用原 `tools/CameraStreamViewer.exe` 兼容工具；它和浏览器 Viewer 只能开一个。当前 GitHub 没有 Camera Viewer 启动器发布包，不需要下载启动器。
 
 请先询问我当前 Arduino IDE、ESP32 Core、串口和开发板情况，然后一次指导一个操作。每一步告诉我应该打开哪个文件、运行哪个工具，以及完成后要把什么日志或截图发给你。不要根据一句“失败了”猜原因。
 【复制结束】
 
-推荐双击 Camera Viewer。ESP32-S3 启动后：
+推荐使用浏览器 Viewer。ESP32-S3 启动后：
 
 1. 电脑连接 `esp32s3cam-xxxx`；
 2. 输入密码 `11223344`；
-3. Windows 双击 `Camera-Viewer-Windows.exe`；macOS 解压 `Camera-Viewer-macOS.zip` 后双击 `Camera Viewer.app`；
-4. 启动器检测设备后会打开系统默认浏览器。
+3. 在 Safari、Chrome 或 Edge 打开 `http://192.168.4.1/`，查看实时画面和页面状态。
 
-如果启动器不可用，可手动打开浏览器访问 `http://192.168.4.1/`。Windows 用户如需兼容原来的 Viewer，也可以使用 `tools/CameraStreamViewer.exe`。旧 exe 和浏览器 Viewer 都会占用视频流，请只开一个。
+Windows 用户如需兼容原来的 Viewer，也可以使用 `tools/CameraStreamViewer.exe`。旧 exe 和浏览器 Viewer 都会占用视频流，请只开一个。
 
 连接 `esp32s3cam-xxxx` 后，Windows 或 macOS 都可能提示“无 Internet”“没有互联网连接”或“此网络无法访问互联网”，这是正常现象。ESP32-S3 创建的是电脑与开发板直接通信的本地 Wi-Fi 热点，本来就不提供互联网。请确认当前 Wi-Fi 名称仍为 `esp32s3cam-xxxx`。
 
@@ -201,9 +193,9 @@ Arduino IDE 版本是：[填写]；ESP32 Core 版本是：[填写]。
 - 色块实物照片。
 - 色块颜色、大小、距离和大致位置。
 - 目标移动、停止或移出画面后分别发生了什么。
-
-如果是启动器或视频入口问题，先告诉 AI：“我双击 Camera Viewer 后看到什么？”并选择最接近的一项：A. 已自动打开画面；B. 提示没有找到 ESP32-S3 Camera；C. App 无法打开；D. 浏览器已打开但没有视频。若 App 无法打开，请先提供 macOS 的错误原文；Gatekeeper 提示优先按 Finder“右键 → 打开 → 再确认打开”处理。AI 应先核对你连接的 Wi-Fi、完整提示和页面状态，不要先猜驱动或硬件故障。
 - AI 上一次让你修改了什么。
+
+如果是视频入口问题，告诉 AI 当前 Wi-Fi 名称、浏览器访问 `http://192.168.4.1/` 后看到什么、页面显示的连接状态，并附完整截图。若页面打不开，记录浏览器的完整错误；若页面能打开但没有视频，记录是否有其他 Viewer 或浏览器标签页占用视频流。AI 应先核对这些事实，不要先猜驱动或硬件故障。
 
 可以使用以下提问：
 
